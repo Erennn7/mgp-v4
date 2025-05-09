@@ -1,7 +1,9 @@
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
+// Force using the hardcoded URL for now
 const API_URL = 'https://jewelry-management-api.onrender.com/api';
+console.log('API URL:', API_URL);
 
 // Create axios instance
 const api = axios.create({

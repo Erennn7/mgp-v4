@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Emergency Page</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #e74c3c;
+        }
+        pre {
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 5px;
+            overflow: auto;
+            font-size: 14px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #debugInfo {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Emergency Fallback Page</h1>
+        <p>The main application failed to load. This is a fallback page to help diagnose the issue.</p>
+        
+        <div>
+            <h2>Path Information</h2>
+            <pre id="pathInfo">Loading path information...</pre>
+            
+            <h2>Debug Information</h2>
+            <pre id="debugInfo">Loading debug information...</pre>
+            
+            <button id="refreshBtn">Refresh Information</button>
+            <button id="testApiBtn">Test API Connection</button>
+        </div>
+    </div>
+
+    <script>
+        // Access electron exposed APIs
+        const { platform, debug } = window.electron || {};
+        const apiUrl = window.env?.apiUrl || 'No API URL found';
+        
+        // Log startup
+        if (debug) {
+            debug('Emergency page loaded');
+        }
+        
+        // Update path information
+        document.getElementById('pathInfo').textContent = 
+            `Platform: ${platform || 'Not available'}\n` +
+            `API URL: ${apiUrl}\n`;
+        
+        // Function to load debug log
+        async function loadDebugLog() {
+            try {
+                const response = await fetch('file://../debug.log');
+                if (response.ok) {
+                    const text = await response.text();
+                    document.getElementById('debugInfo').textContent = text;
+                } else {
+                    document.getElementById('debugInfo').textContent = 'Could not load debug log';
+                }
+            } catch (error) {
+                document.getElementById('debugInfo').textContent = `Error loading debug log: ${error.message}`;
+            }
+        }
+        
+        // Test API connection
+        document.getElementById('testApiBtn').addEventListener('click', async () => {
+            const debugArea = document.getElementById('debugInfo');
+            debugArea.textContent = 'Testing API connection...';
+            
+            try {
+                const response = await fetch(apiUrl + '/health', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    debugArea.textContent = `API connection successful: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    debugArea.textContent = `API returned status ${response.status}: ${response.statusText}`;
+                }
+            } catch (error) {
+                debugArea.textContent = `API connection failed: ${error.message}`;
+            }
+        });
+        
+        // Refresh debug info
+        document.getElementById('refreshBtn').addEventListener('click', loadDebugLog);
+        
+        // Initial load
+        loadDebugLog();
+    </script>
+</body>
+</html> 

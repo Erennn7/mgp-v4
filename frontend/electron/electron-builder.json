@@ -1,0 +1,20 @@
+{
+  "appId": "com.jewelrymanagement.app",
+  "productName": "Jewelry Management System",
+  "directories": {
+    "output": "dist_electron"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*"
+  ],
+  "extraMetadata": {
+    "main": "electron/main.js"
+  },
+  "mac": {
+    "category": "public.app-category.business",
+    "target": [
+      "dmg"
+    ]
+  }
+} 

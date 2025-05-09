@@ -2,7 +2,7 @@
   "name": "jewelry-management-system-frontend",
   "version": "1.0.0",
   "description": "Frontend for Jewelry Management System",
-  "main": "src/main.js",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -24,6 +24,7 @@
     "axios": "^1.5.1",
     "date-fns": "^2.29.3",
     "dayjs": "^1.11.13",
+    "express": "^4.18.3",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
     "react": "^18.2.0",
@@ -55,6 +56,9 @@
       "dist/**/*",
       "electron/**/*"
     ],
+    "extraMetadata": {
+      "main": "electron/main.js"
+    },
     "mac": {
       "category": "public.app-category.business",
       "target": [

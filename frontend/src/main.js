@@ -6,6 +6,9 @@ const url = require('url');
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 const isDev = process.env.NODE_ENV === 'development';
 
+// Set API URL for both development and production
+process.env.VITE_API_URL = 'https://jewelry-management-api.onrender.com/api';
+
 // Keep a global reference of the window object to prevent garbage collection
 let mainWindow;
 
@@ -28,12 +31,13 @@ function createWindow() {
   const startUrl = isDev
     ? 'http://localhost:5173'
     : url.format({
-        pathname: path.join(__dirname, '../../dist/index.html'),
+        pathname: path.join(__dirname, '../dist/index.html'),
         protocol: 'file:',
         slashes: true,
       });
 
   console.log('Loading URL:', startUrl);
+  console.log('API URL:', process.env.VITE_API_URL);
   mainWindow.loadURL(startUrl);
 
   // Open the DevTools in development mode

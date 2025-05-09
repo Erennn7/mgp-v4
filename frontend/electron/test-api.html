@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Jewelry Management System</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 0; margin: 0; }
+    button { padding: 10px; margin: 10px 0; cursor: pointer; }
+    #result { margin: 20px; white-space: pre-wrap; border: 1px solid #ccc; padding: 10px; }
+    .loading { display: none; margin: 20px; font-style: italic; }
+    .login-form { margin: 20px; display: none; max-width: 400px; }
+    .login-form input { display: block; margin: 10px 0; padding: 8px; width: 100%; }
+    .login-form button { display: block; width: 100%; background-color: #4CAF50; color: white; border: none; }
+    .dashboard { display: none; height: 100vh; }
+    .header { background-color: #333; color: white; padding: 15px; margin-bottom: 0; }
+    .main-container { display: flex; height: calc(100% - 60px); }
+    .sidebar { width: 200px; background-color: #f5f5f5; padding: 10px; }
+    .menu-item { padding: 10px 15px; margin: 5px 0; background-color: #f0f0f0; cursor: pointer; border-radius: 4px; }
+    .menu-item:hover { background-color: #ddd; }
+    .menu-item.active { background-color: #ddd; }
+    .content-area { flex: 1; padding: 20px; overflow: auto; }
+    .content { padding: 20px; border: 1px solid #ddd; margin-bottom: 20px; }
+    .connection-status { padding: 10px; margin-bottom: 20px; background-color: #e7f7e7; border: 1px solid #c3e6c3; }
+    .info { padding: 10px; margin-top: 20px; background-color: #f0f0f0; }
+    .error { color: red; margin-top: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background-color: #f2f2f2; }
+    tr:hover { background-color: #f5f5f5; }
+    .section { margin-bottom: 30px; }
+    .api-test { padding: 20px; }
+  </style>
+</head>
+<body>
+  <div id="api-test" class="api-test">
+    <h1>Jewelry Management System</h1>
+    <p>Testing API connection to Render backend...</p>
+    <div id="result">Connecting to API...</div>
+    <div id="loading" class="loading">Loading application, please wait...</div>
+  </div>
+  
+  <div id="login-form" class="login-form">
+    <h2>Login to Jewelry Management System</h2>
+    <form id="auth-form">
+      <input type="email" id="email" placeholder="Email" required>
+      <input type="password" id="password" placeholder="Password" required>
+      <button type="submit">Login</button>
+    </form>
+    <p class="info">Please log in with your credentials to access the system.</p>
+    <p class="error" id="login-error"></p>
+  </div>
+
+  <div id="dashboard" class="dashboard">
+    <div class="header">
+      <h1>Jewelry Management System</h1>
+      <p id="user-info">Welcome!</p>
+    </div>
+    <div class="main-container">
+      <div class="sidebar">
+        <div class="menu-item active" data-section="dashboard">Dashboard</div>
+        <div class="menu-item" data-section="products">Products</div>
+        <div class="menu-item" data-section="sales">Sales</div>
+        <div class="menu-item" data-section="customers">Customers</div>
+        <div class="menu-item" data-section="reports">Reports</div>
+        <div class="menu-item" id="logout-btn">Logout</div>
+      </div>
+      <div class="content-area">
+        <div class="connection-status">
+          <h3>Backend Connection Status</h3>
+          <p>Connected to API: <code>https://jewelry-management-api.onrender.com/api</code></p>
+        </div>
+        
+        <div class="content" id="dashboard-section">
+          <h2>Dashboard</h2>
+          <div id="dashboard-content">
+            <p>Loading dashboard data...</p>
+          </div>
+        </div>
+        
+        <div class="content" id="products-section" style="display: none;">
+          <h2>Products</h2>
+          <div id="products-content">
+            <p>Loading products data...</p>
+          </div>
+        </div>
+        
+        <div class="content" id="sales-section" style="display: none;">
+          <h2>Sales</h2>
+          <div id="sales-content">
+            <p>Loading sales data...</p>
+          </div>
+        </div>
+        
+        <div class="content" id="customers-section" style="display: none;">
+          <h2>Customers</h2>
+          <div id="customers-content">
+            <p>Loading customers data...</p>
+          </div>
+        </div>
+        
+        <div class="content" id="reports-section" style="display: none;">
+          <h2>Reports</h2>
+          <div id="reports-content">
+            <p>Loading reports data...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // First test the API connection
+    async function testApiConnection() {
+      const resultDiv = document.getElementById('result');
+      
+      try {
+        const response = await fetch('https://jewelry-management-api.onrender.com/api/health');
+        const status = response.status;
+        const data = await response.json();
+        
+        if (status === 200) {
+          resultDiv.textContent = `Connection successful! API Status: ${status}`;
+          document.getElementById('loading').style.display = 'block';
+          
+          // Check if user is already logged in
+          const token = localStorage.getItem('token');
+          if (token) {
+            // Show dashboard directly
+            showDashboard();
+          } else {
+            // Display the login form
+            setTimeout(() => {
+              document.getElementById('api-test').style.display = 'none';
+              document.getElementById('login-form').style.display = 'block';
+              document.getElementById('loading').style.display = 'none';
+            }, 1000);
+          }
+          
+          return true;
+        } else {
+          resultDiv.textContent = `API returned unexpected status: ${status}`;
+          return false;
+        }
+      } catch (error) {
+        resultDiv.textContent = `Connection failed! Error: ${error.message}`;
+        return false;
+      }
+    }
+    
+    // Handle login form submission
+    document.getElementById('auth-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const resultDiv = document.getElementById('result');
+      const loginError = document.getElementById('login-error');
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      loginError.textContent = '';
+      
+      try {
+        const response = await fetch('https://jewelry-management-api.onrender.com/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          // Save token and user data
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          
+          // Show dashboard
+          showDashboard();
+        } else {
+          loginError.textContent = data.error || 'Login failed. Please check your credentials.';
+        }
+      } catch (error) {
+        loginError.textContent = `Error: ${error.message}`;
+      }
+    });
+    
+    // Function to show dashboard
+    function showDashboard() {
+      document.getElementById('api-test').style.display = 'none';
+      document.getElementById('login-form').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (user.name) {
+        document.getElementById('user-info').textContent = `Welcome, ${user.name}!`;
+      }
+      
+      // Load dashboard data
+      loadDashboardData();
+    }
+    
+    // Function to load dashboard data
+    async function loadDashboardData() {
+      const dashboardContent = document.getElementById('dashboard-content');
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        dashboardContent.innerHTML = '<p>Not authenticated. Please log in again.</p>';
+        return;
+      }
+      
+      try {
+        // Example request to get overview data
+        const response = await fetch('https://jewelry-management-api.onrender.com/api/products', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data && data.data && Array.isArray(data.data)) {
+            // Create a dashboard summary using the products data
+            const productCount = data.data.length;
+            
+            dashboardContent.innerHTML = `
+              <div class="section">
+                <h3>System Overview</h3>
+                <p>Products in inventory: ${productCount}</p>
+                <p>API connection is working correctly!</p>
+              </div>
+              
+              <div class="section">
+                <h3>Recent Products</h3>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Category</th>
+                      <th>Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${data.data.slice(0, 5).map(product => `
+                      <tr>
+                        <td>${product.name || 'N/A'}</td>
+                        <td>${product.category || 'N/A'}</td>
+                        <td>₹${product.sellingPrice || 'N/A'}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `;
+          } else {
+            dashboardContent.innerHTML = '<p>No product data available.</p>';
+          }
+        } else {
+          dashboardContent.innerHTML = '<p>Failed to load dashboard data. Token may be expired.</p>';
+        }
+      } catch (error) {
+        dashboardContent.innerHTML = `<p>Error loading dashboard: ${error.message}</p>`;
+      }
+    }
+    
+    // Handle menu navigation
+    document.querySelectorAll('.menu-item').forEach(item => {
+      if (item.id !== 'logout-btn') {
+        item.addEventListener('click', () => {
+          // Update active menu item
+          document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
+          item.classList.add('active');
+          
+          // Show appropriate section
+          const section = item.dataset.section;
+          document.querySelectorAll('.content').forEach(content => {
+            content.style.display = 'none';
+          });
+          document.getElementById(`${section}-section`).style.display = 'block';
+          
+          // Load data for that section if needed
+          if (section === 'products') loadProductsData();
+          if (section === 'customers') loadCustomersData();
+          if (section === 'sales') loadSalesData();
+          if (section === 'reports') loadReportsData();
+        });
+      }
+    });
+    
+    // Simple data loading functions for other sections
+    async function loadProductsData() {
+      const content = document.getElementById('products-content');
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      try {
+        const response = await fetch('https://jewelry-management-api.onrender.com/api/products', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data && data.data && Array.isArray(data.data)) {
+            content.innerHTML = `
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Type</th>
+                    <th>Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${data.data.map(product => `
+                    <tr>
+                      <td>${product.name || 'N/A'}</td>
+                      <td>${product.category || 'N/A'}</td>
+                      <td>${product.type || 'N/A'}</td>
+                      <td>₹${product.sellingPrice || 'N/A'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `;
+          } else {
+            content.innerHTML = '<p>No products found.</p>';
+          }
+        } else {
+          content.innerHTML = '<p>Failed to load products. Your session may have expired.</p>';
+        }
+      } catch (error) {
+        content.innerHTML = `<p>Error: ${error.message}</p>`;
+      }
+    }
+    
+    function loadCustomersData() {
+      const content = document.getElementById('customers-content');
+      content.innerHTML = '<p>Customer data would be loaded here in the full application.</p>';
+    }
+    
+    function loadSalesData() {
+      const content = document.getElementById('sales-content');
+      content.innerHTML = '<p>Sales data would be loaded here in the full application.</p>';
+    }
+    
+    function loadReportsData() {
+      const content = document.getElementById('reports-content');
+      content.innerHTML = '<p>Reports would be generated here in the full application.</p>';
+    }
+    
+    // Handle logout
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.reload();
+    });
+    
+    // Run API test automatically on load
+    window.onload = () => {
+      // Check if token exists
+      const token = localStorage.getItem('token');
+      if (token) {
+        showDashboard();
+      } else {
+        testApiConnection();
+      }
+    };
+  </script>
+</body>
+</html> 

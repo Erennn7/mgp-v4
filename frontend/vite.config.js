@@ -10,13 +10,14 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  base: './', // Use relative paths for assets
   server: {
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'https://jewelry-management-api.onrender.com',
         changeOrigin: true,
-        secure: false
+        secure: true
       }
     }
   },
