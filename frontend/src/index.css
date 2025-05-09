@@ -1,0 +1,52 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Prevent text selection in certain areas */
+.no-select {
+  user-select: none;
+}
+
+/* App level transitions */
+.fade-enter {
+  opacity: 0;
+}
+.fade-enter-active {
+  opacity: 1;
+  transition: opacity 300ms;
+}
+.fade-exit {
+  opacity: 1;
+}
+.fade-exit-active {
+  opacity: 0;
+  transition: opacity 300ms;
+} 
