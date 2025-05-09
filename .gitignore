@@ -7,6 +7,8 @@ backend/node_modules/
 dist/
 build/
 .env
+frontend/dist/
+frontend/dist_electron/
 
 # Logs
 logs
