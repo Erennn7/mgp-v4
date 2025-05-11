@@ -6,6 +6,13 @@ import {
   Tooltip,
   IconButton,
   CircularProgress,
+  Tabs,
+  Tab,
+  Typography,
+  Chip,
+  Grid,
+  Divider,
+  Paper,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -13,6 +20,7 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Inventory as InventoryIcon,
+  FilterAlt as FilterIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 
@@ -24,6 +32,20 @@ import ProductForm from './ProductForm';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
 
+// Default product types
+const DEFAULT_PRODUCT_TYPES = [
+  { value: 'All', label: 'All Products' },
+  { value: 'Ring', label: 'Rings' },
+  { value: 'Necklace', label: 'Necklaces' },
+  { value: 'Bracelet', label: 'Bracelets' },
+  { value: 'Earring', label: 'Earrings' },
+  { value: 'Pendant', label: 'Pendants' },
+  { value: 'Chain', label: 'Chains' },
+  { value: 'Bangle', label: 'Bangles' },
+  { value: 'Coin', label: 'Coins' },
+  { value: 'Other', label: 'Other Items' },
+];
+
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,13 +55,61 @@ const Products = () => {
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [productFormData, setProductFormData] = useState(null);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [paginationModel, setPaginationModel] = useState({
+    pageSize: 100,
+    page: 0,
+  });
+  // Add product type filter
+  const [selectedType, setSelectedType] = useState('All');
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [typeCounts, setTypeCounts] = useState({});
+  const [productTypes, setProductTypes] = useState(DEFAULT_PRODUCT_TYPES);
+  const [sortedProductTypes, setSortedProductTypes] = useState(DEFAULT_PRODUCT_TYPES);
   const navigate = useNavigate();
+
+  // Fetch custom product types
+  const fetchProductTypes = async () => {
+    try {
+      const response = await api.get('/product-types');
+      if (response.data.success) {
+        const customTypes = response.data.data.map(type => ({
+          value: type.value,
+          label: type.label
+        }));
+        
+        // Combine default types with custom types, avoiding duplicates
+        const defaultTypeValues = DEFAULT_PRODUCT_TYPES.map(t => t.value);
+        const filteredCustomTypes = customTypes.filter(type => 
+          !defaultTypeValues.includes(type.value) && type.value !== 'All'
+        );
+        
+        // Create combined list (keep All at the top, then default types, then custom types)
+        const newProductTypes = [
+          DEFAULT_PRODUCT_TYPES[0], // All Products
+          ...DEFAULT_PRODUCT_TYPES.slice(1), // Default types except All
+          ...filteredCustomTypes // Custom types
+        ];
+        
+        setProductTypes(newProductTypes);
+        // Initialize sortedProductTypes with the same order initially
+        setSortedProductTypes(newProductTypes);
+      }
+    } catch (err) {
+      console.error('Error fetching product types:', err);
+    }
+  };
 
   // Fetch products
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/products');
+      const response = await api.get('/products', {
+        params: {
+          limit: paginationModel.pageSize,
+          page: paginationModel.page + 1 // API uses 1-based pagination
+        }
+      });
       
       // Get latest rates for price calculation
       const ratesResponse = await api.get('/rates/latest');
@@ -71,6 +141,21 @@ const Products = () => {
       });
       
       setProducts(productsWithRates);
+      
+      // Count products by type
+      const counts = { 'All': productsWithRates.length };
+      productTypes.slice(1).forEach(type => {
+        counts[type.value] = productsWithRates.filter(p => p.type === type.value).length;
+      });
+      setTypeCounts(counts);
+      
+      // Apply type filter
+      applyTypeFilter(productsWithRates, selectedType);
+      
+      // Set total count from pagination data
+      if (response.data.pagination) {
+        setTotalProducts(response.data.total || response.data.data.length);
+      }
       setError(null);
     } catch (err) {
       setError('Failed to load products');
@@ -80,9 +165,58 @@ const Products = () => {
     }
   };
 
+  // Apply type filter to products
+  const applyTypeFilter = (products, type) => {
+    if (type === 'All') {
+      setFilteredProducts(products);
+    } else {
+      setFilteredProducts(products.filter(product => product.type === type));
+    }
+  };
+
+  // Handle type change
+  const handleTypeChange = (event, newType) => {
+    setSelectedType(newType);
+    applyTypeFilter(products, newType);
+  };
+
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    // First fetch the product types, then fetch the products
+    fetchProductTypes().then(() => {
+      fetchProducts();
+    });
+  }, [paginationModel.page, paginationModel.pageSize]);
+
+  // Apply filter when selectedType changes
+  useEffect(() => {
+    applyTypeFilter(products, selectedType);
+  }, [selectedType, products]);
+
+  // Update counts when product types or products change
+  useEffect(() => {
+    if (products.length > 0 && productTypes.length > 0) {
+      const counts = { 'All': products.length };
+      productTypes.slice(1).forEach(type => {
+        counts[type.value] = products.filter(p => p.type === type.value).length;
+      });
+      setTypeCounts(counts);
+      
+      // Sort product types by count (descending order)
+      // Keep "All Products" at the top, then sort the rest by count
+      const allProductsType = productTypes.find(t => t.value === 'All');
+      const otherTypes = productTypes.filter(t => t.value !== 'All');
+      
+      // Sort by product count (descending)
+      const sortedTypes = otherTypes.sort((a, b) => {
+        const countA = counts[a.value] || 0;
+        const countB = counts[b.value] || 0;
+        return countB - countA; // Descending order
+      });
+      
+      // Set the sorted types with "All" at the top
+      setSortedProductTypes([allProductsType, ...sortedTypes]);
+    }
+  }, [products, productTypes]);
 
   // Handle view product
   const handleViewProduct = (productId) => {
@@ -148,6 +282,9 @@ const Products = () => {
         await api.post('/products', productFormData);
         toast.success('Product added successfully');
       }
+      
+      // Refresh product types first, then fetch products
+      await fetchProductTypes();
       fetchProducts();
       setOpenForm(false);
     } catch (err) {
@@ -170,41 +307,51 @@ const Products = () => {
     {
       field: 'category',
       headerName: 'Category',
-      width: 150,
+      width: 140,
     },
     {
-      field: 'ratePerGram',
-      headerName: 'Rate Per Gram',
+      field: 'type',
+      headerName: 'Type',
       width: 120,
-      valueFormatter: (params) =>
-        params.value
-          ? new Intl.NumberFormat('en-IN', {
-              style: 'currency',
-              currency: 'INR',
-            }).format(params.value)
-          : '-',
+    },
+    {
+      field: 'weights',
+      headerName: 'Net Wt/Gross Wt',
+      width: 140,
+      valueGetter: (params) => {
+        return { 
+          netWeight: params.row.netWeight || 0, 
+          grossWeight: params.row.grossWeight || 0,
+          weightType: params.row.weightType || 'Gram'
+        };
+      },
+      renderCell: (params) => {
+        const { netWeight, grossWeight, weightType } = params.value;
+        const unit = weightType === 'Gram' ? 'g' : 
+                    weightType === 'Milligram' ? 'mg' : 
+                    weightType === 'Carat' ? 'ct' : '';
+        
+        return (
+          <Typography variant="body2">
+            {`${netWeight}${unit}/${grossWeight}${unit}`}
+          </Typography>
+        );
+      },
     },
     {
       field: 'stock',
       headerName: 'Stock',
-      width: 120,
+      width: 100,
     },
     {
       field: 'status',
       headerName: 'Status',
-      width: 150,
+      width: 130,
       renderCell: (params) => (
         <StatusChip 
           status={params.row.stock > 0 ? 'In Stock' : 'Out of Stock'} 
         />
       ),
-    },
-    {
-      field: 'createdAt',
-      headerName: 'Created',
-      width: 120,
-      valueFormatter: (params) =>
-        params.value ? format(new Date(params.value), 'MM/dd/yyyy') : '-',
     },
     {
       field: 'actions',
@@ -256,21 +403,136 @@ const Products = () => {
         onActionClick={handleAddProduct}
       />
 
-      <DataTable
-        title="Products List"
-        rows={products}
-        columns={columns}
-        loading={loading}
-        error={error}
-        getRowId={(row) => row._id}
-        height={600}
-      />
+      <Paper sx={{ mb: 3, p: 2, borderRadius: 2 }}>
+        <Typography variant="h6" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
+          <FilterIcon sx={{ mr: 1 }} /> Filter by Type
+        </Typography>
+
+        <Box sx={{ 
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 1,
+          pb: 2
+        }}>
+          {sortedProductTypes.map((type) => (
+            <Chip
+              key={type.value}
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  {type.label}
+                  {typeCounts[type.value] > 0 && (
+                    <Box 
+                      component="span"
+                      sx={{ 
+                        ml: 0.5,
+                        bgcolor: selectedType === type.value ? 'primary.dark' : 'action.selected',
+                        borderRadius: '50%',
+                        width: 20,
+                        height: 20,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.7rem',
+                      }}
+                    >
+                      {typeCounts[type.value]}
+                    </Box>
+                  )}
+                </Box>
+              }
+              onClick={() => handleTypeChange(null, type.value)}
+              color={selectedType === type.value ? "primary" : "default"}
+              variant={selectedType === type.value ? "filled" : "outlined"}
+              sx={{
+                m: 0.5,
+                '& .MuiChip-label': {
+                  display: 'flex',
+                  alignItems: 'center',
+                }
+              }}
+            />
+          ))}
+        </Box>
+
+        <Box sx={{ mt: 2 }}>
+          <DataTable
+            title="Products List"
+            rows={filteredProducts}
+            columns={columns}
+            loading={loading}
+            error={error}
+            getRowId={(row) => row._id}
+            height={600}
+            pageSize={paginationModel.pageSize}
+            pagination={true}
+            paginationMode="server"
+            paginationModel={paginationModel}
+            onPaginationModelChange={setPaginationModel}
+            pageSizeOptions={[25, 50, 100]}
+            rowCount={totalProducts}
+            quickSearchField="custom"
+            customSearchFunction={(row, searchTerm) => {
+              // If no search term, include the row
+              if (!searchTerm) return true;
+              
+              // Convert search term to lowercase
+              const lowerSearchTerm = searchTerm.toLowerCase();
+              
+              // Check if search includes 'g', 'mg', or 'ct' - indicating a weight search
+              const isWeightSearch = /\d+(\.\d+)?g|\d+(\.\d+)?mg|\d+(\.\d+)?ct/i.test(searchTerm);
+              
+              if (isWeightSearch) {
+                // Extract the number and unit from the search
+                const match = searchTerm.match(/(\d+(\.\d+)?)([gmct]+)/i);
+                if (match) {
+                  const searchValue = parseFloat(match[1]);
+                  const searchUnit = match[3].toLowerCase();
+                  
+                  // Get the product's weight values
+                  const netWeight = parseFloat(row.netWeight) || 0;
+                  const grossWeight = parseFloat(row.grossWeight) || 0;
+                  const weightUnit = (row.weightType || 'Gram').toLowerCase();
+                  
+                  // Normalize units for comparison
+                  const normalizedSearchUnit = 
+                    searchUnit === 'g' ? 'gram' : 
+                    searchUnit === 'mg' ? 'milligram' : 
+                    searchUnit === 'ct' ? 'carat' : 'gram';
+                  
+                  // Check if the search weight matches either net or gross weight
+                  return (
+                    (Math.abs(netWeight - searchValue) < 0.01 && normalizedSearchUnit === weightUnit.toLowerCase()) ||
+                    (Math.abs(grossWeight - searchValue) < 0.01 && normalizedSearchUnit === weightUnit.toLowerCase())
+                  );
+                }
+              }
+              
+              // Otherwise fall back to standard search across all fields
+              return Object.keys(row).some(key => {
+                const value = row[key];
+                if (value === null || value === undefined) return false;
+                
+                // Special handling for the weights
+                if (key === 'netWeight' || key === 'grossWeight') {
+                  return String(value).includes(lowerSearchTerm);
+                }
+                
+                return String(value).toLowerCase().includes(lowerSearchTerm);
+              });
+            }}
+          />
+        </Box>
+      </Paper>
 
       {/* Add/Edit Product Form */}
       {openForm && (
         <FormDialog
           open={openForm}
-          onClose={() => setOpenForm(false)}
+          onClose={() => {
+            setOpenForm(false);
+            // Refresh product types when the form is closed
+            fetchProductTypes();
+          }}
           title={selectedProduct ? 'Edit Product' : 'Add New Product'}
           onSubmit={handleFormSubmit}
           loading={formSubmitting}
@@ -301,12 +563,14 @@ const Products = () => {
             <br />
             <strong>Category:</strong> {confirmDelete.category}
             <br />
-            <strong>Rate Per Gram:</strong> {
-              new Intl.NumberFormat('en-IN', {
-                style: 'currency',
-                currency: 'INR',
-              }).format(confirmDelete.ratePerGram || 0)
-            }
+            <strong>Net Wt/Gross Wt:</strong> {confirmDelete.netWeight || 0}
+            {confirmDelete.weightType === 'Gram' ? 'g' : 
+             confirmDelete.weightType === 'Milligram' ? 'mg' : 
+             confirmDelete.weightType === 'Carat' ? 'ct' : ''}
+            /{confirmDelete.grossWeight || 0}
+            {confirmDelete.weightType === 'Gram' ? 'g' : 
+             confirmDelete.weightType === 'Milligram' ? 'mg' : 
+             confirmDelete.weightType === 'Carat' ? 'ct' : ''}
           </Box>
         </FormDialog>
       )}

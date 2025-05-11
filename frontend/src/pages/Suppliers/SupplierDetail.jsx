@@ -34,6 +34,7 @@ import { useReactToPrint } from 'react-to-print';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { toast } from 'react-toastify';
+import PrintPurchase from '../../components/Printing/PrintPurchase';
 
 const SupplierDetail = () => {
   const { id } = useParams();
@@ -42,6 +43,9 @@ const SupplierDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const receiptRef = React.useRef(null);
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [directPrint, setDirectPrint] = useState(false);
+  const [generatePdfOnly, setGeneratePdfOnly] = useState(false);
 
   useEffect(() => {
     const fetchSupplierPurchase = async () => {
@@ -61,10 +65,35 @@ const SupplierDetail = () => {
     fetchSupplierPurchase();
   }, [id]);
 
+  // Legacy print using react-to-print  
   const handlePrint = useReactToPrint({
     content: () => receiptRef.current,
     documentTitle: `Supplier_Purchase_Receipt_${supplierPurchase?.purchaseNumber}`,
   });
+
+  // Handle printing with the new component
+  const handlePrintNew = () => {
+    setPrintDialogOpen(true);
+  };
+
+  // Handle direct printing without preview dialog
+  const handleDirectPrint = () => {
+    setDirectPrint(true);
+    setPrintDialogOpen(true);
+  };
+
+  // Handle PDF generation
+  const handleGeneratePdf = () => {
+    setGeneratePdfOnly(true);
+    setPrintDialogOpen(true);
+  };
+
+  // Handle closing the print dialog
+  const handleClosePrintDialog = () => {
+    setPrintDialogOpen(false);
+    setDirectPrint(false);
+    setGeneratePdfOnly(false);
+  };
 
   // Generate PDF for supplier purchase
   const generatePDF = (shouldPrint = false) => {
@@ -388,7 +417,7 @@ const SupplierDetail = () => {
             variant="outlined"
             color="primary"
             startIcon={<PrintIcon />}
-            onClick={handlePrint}
+            onClick={handlePrintNew}
           >
             Print Receipt
           </Button>
@@ -396,7 +425,7 @@ const SupplierDetail = () => {
             variant="outlined"
             color="primary"
             startIcon={<PdfIcon />}
-            onClick={() => generatePDF()}
+            onClick={handleGeneratePdf}
           >
             Download PDF
           </Button>
@@ -404,7 +433,7 @@ const SupplierDetail = () => {
             variant="contained"
             color="primary"
             startIcon={<PrintIcon />}
-            onClick={() => generatePDF(true)}
+            onClick={handleDirectPrint}
           >
             Print PDF
           </Button>
@@ -608,190 +637,14 @@ const SupplierDetail = () => {
         )}
       </Grid>
       
-      {/* Hidden Receipt for Printing */}
-      <Box sx={{ display: 'none' }}>
-        <Box 
-          ref={receiptRef} 
-          sx={{ 
-            p: 4, 
-            bgcolor: 'white',
-            width: '210mm', // A4 width
-            minHeight: '297mm', // A4 height
-            '@media print': {
-              width: '100%',
-              height: 'auto',
-            }
-          }}
-        >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-            <Box>
-              <Typography variant="h5" gutterBottom>
-                Supplier Purchase Receipt
-              </Typography>
-              <Typography variant="body2">
-                Receipt #: {supplierPurchase.purchaseNumber}
-              </Typography>
-              {supplierPurchase.invoiceNumber && (
-                <Typography variant="body2">
-                  Invoice #: {supplierPurchase.invoiceNumber}
-                </Typography>
-              )}
-              <Typography variant="body2">
-                Date: {format(new Date(supplierPurchase.purchaseDate), 'dd/MM/yyyy')}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="h6">
-                MG Potdar Jewellers
-              </Typography>
-              <Typography variant="body2">
-                123 Main Street, Pune
-              </Typography>
-              <Typography variant="body2">
-                Phone: 1234567890
-              </Typography>
-              <Typography variant="body2">
-                Email: contact@mgpotdarjewellers.com
-              </Typography>
-            </Box>
-          </Box>
-          
-          <Divider sx={{ mb: 3 }} />
-          
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Supplier Information
-            </Typography>
-            <Grid container spacing={1}>
-              <Grid item xs={3}>
-                <Typography variant="body2" fontWeight="bold">
-                  Name:
-                </Typography>
-              </Grid>
-              <Grid item xs={9}>
-                <Typography variant="body2">
-                  {supplierPurchase.supplier?.name || 'N/A'}
-                </Typography>
-              </Grid>
-              
-              {supplierPurchase.supplier?.contact && (
-                <>
-                  <Grid item xs={3}>
-                    <Typography variant="body2" fontWeight="bold">
-                      Contact:
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={9}>
-                    <Typography variant="body2">
-                      {supplierPurchase.supplier.contact}
-                    </Typography>
-                  </Grid>
-                </>
-              )}
-            </Grid>
-          </Box>
-          
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Purchase Details
-            </Typography>
-            
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                    <TableCell>Description</TableCell>
-                    <TableCell align="right">Weight</TableCell>
-                    <TableCell align="right">Rate</TableCell>
-                    <TableCell align="right">Quantity</TableCell>
-                    <TableCell align="right">Amount</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {supplierPurchase.items?.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        {item.description}
-                        <Typography variant="caption" display="block" color="text.secondary">
-                          {item.category} - {item.purity}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        {item.weight} {item.weightType}
-                      </TableCell>
-                      <TableCell align="right">
-                        ₹{item.ratePerUnit?.toLocaleString()}/{item.weightType}
-                      </TableCell>
-                      <TableCell align="right">
-                        {item.quantity}
-                      </TableCell>
-                      <TableCell align="right">
-                        ₹{item.totalAmount?.toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
-          
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
-            <Box sx={{ width: '250px' }}>
-              <Grid container spacing={1}>
-                <Grid item xs={6}>
-                  <Typography variant="body2" fontWeight="bold">
-                    Total Amount:
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" fontWeight="bold" align="right">
-                    ₹{supplierPurchase.totalAmount?.toLocaleString()}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2">
-                    Payment Status:
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" align="right">
-                    {supplierPurchase.paymentStatus}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2">
-                    Payment Method:
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" align="right">
-                    {supplierPurchase.paymentMethod}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Box>
-          </Box>
-          
-          {supplierPurchase.notes && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Notes:
-              </Typography>
-              <Typography variant="body2">
-                {supplierPurchase.notes}
-              </Typography>
-            </Box>
-          )}
-          
-          <Divider sx={{ mb: 3 }} />
-          
-          <Box>
-            <Typography variant="body2" align="center">
-              Thank you for your business!
-            </Typography>
-          </Box>
-        </Box>
-      </Box>
+      {/* Print Purchase Component */}
+      <PrintPurchase
+        open={printDialogOpen}
+        onClose={handleClosePrintDialog}
+        purchaseData={supplierPurchase}
+        directPrint={directPrint}
+        generatePdf={generatePdfOnly}
+      />
     </>
   );
 };

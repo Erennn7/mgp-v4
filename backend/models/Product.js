@@ -33,17 +33,6 @@ const ProductSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: [
-      'Ring',
-      'Necklace',
-      'Bracelet',
-      'Earring',
-      'Pendant',
-      'Chain',
-      'Bangle',
-      'Coin',
-      'Other'
-    ],
     required: [true, 'Please specify the type of jewelry']
   },
   weightType: {

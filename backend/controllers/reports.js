@@ -92,6 +92,74 @@ exports.getDashboardStats = asyncHandler(async (req, res, next) => {
     }
   ]);
   
+  // Get current month's sales by metal type (gold and silver)
+  const currentMonth = new Date().getMonth() + 1; // JavaScript months are 0-indexed
+  const startOfMonth = new Date(currentYear, currentMonth - 1, 1);
+  const endOfMonth = new Date(currentYear, currentMonth, 0, 23, 59, 59, 999);
+
+  // Get sales by metal type for the current month
+  const salesByMetalType = await Sale.aggregate([
+    {
+      $match: {
+        createdAt: { $gte: startOfMonth, $lte: endOfMonth }
+      }
+    },
+    {
+      $unwind: '$items'
+    },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'items.product',
+        foreignField: '_id',
+        as: 'productInfo'
+      }
+    },
+    {
+      $unwind: {
+        path: '$productInfo',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $addFields: {
+        // If it's a custom item, use the category from customProductDetails
+        itemCategory: { 
+          $cond: [
+            '$items.isCustomItem', 
+            '$items.customProductDetails.category', 
+            '$productInfo.category'
+          ]
+        }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          // Determine if it's gold, silver, or other based on category
+          metalType: {
+            $cond: {
+              if: { $regexMatch: { input: '$itemCategory', regex: /gold/i } },
+              then: 'Gold',
+              else: {
+                $cond: {
+                  if: { $regexMatch: { input: '$itemCategory', regex: /silver/i } },
+                  then: 'Silver',
+                  else: 'Other'
+                }
+              }
+            }
+          }
+        },
+        salesCount: { $sum: 1 },
+        totalAmount: { $sum: '$items.total' }
+      }
+    },
+    {
+      $sort: { '_id.metalType': 1 }
+    }
+  ]);
+  
   // Fill in missing months for sales chart
   const salesData = Array(12).fill(0).map((_, index) => {
     const monthData = salesByMonth.find(item => item._id.month === index + 1);
@@ -99,6 +167,21 @@ exports.getDashboardStats = asyncHandler(async (req, res, next) => {
       month: index + 1,
       revenue: monthData ? monthData.revenue : 0,
       totalSales: monthData ? monthData.totalSales : 0
+    };
+  });
+  
+  // Format metal type sales data
+  const monthlySalesByMetal = {
+    Gold: { salesCount: 0, totalAmount: 0 },
+    Silver: { salesCount: 0, totalAmount: 0 },
+    Other: { salesCount: 0, totalAmount: 0 }
+  };
+  
+  salesByMetalType.forEach(item => {
+    const metalType = item._id.metalType;
+    monthlySalesByMetal[metalType] = {
+      salesCount: item.salesCount,
+      totalAmount: item.totalAmount
     };
   });
   
@@ -116,7 +199,8 @@ exports.getDashboardStats = asyncHandler(async (req, res, next) => {
       lowStockProducts,
       recentSales,
       overdueLoans,
-      salesData
+      salesData,
+      monthlySalesByMetal
     }
   });
 });
@@ -432,4 +516,4 @@ exports.getCustomerReport = asyncHandler(async (req, res, next) => {
       customersWithSavings: formattedSavingCustomers
     }
   });
-}); 
+});

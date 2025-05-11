@@ -10,7 +10,7 @@ exports.getLoans = asyncHandler(async (req, res, next) => {
   const reqQuery = { ...req.query };
 
   // Fields to exclude
-  const removeFields = ['select', 'sort', 'page', 'limit'];
+  const removeFields = ['select', 'sort', 'page', 'limit', 'search'];
 
   // Loop over removeFields and delete them from reqQuery
   removeFields.forEach(param => delete reqQuery[param]);
@@ -22,15 +22,57 @@ exports.getLoans = asyncHandler(async (req, res, next) => {
   queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
 
   // Finding resource
-  let query = Loan.find(JSON.parse(queryStr))
-    .populate({
-      path: 'customer',
-      select: 'name phone'
-    })
-    .populate({
-      path: 'createdBy',
-      select: 'name'
+  let query = Loan.find(JSON.parse(queryStr));
+  
+  // Handle search by loan number or customer name
+  if (req.query.search) {
+    // Search by loan number first
+    const loanNumberQuery = { 
+      loanNumber: { $regex: req.query.search, $options: 'i' } 
+    };
+
+    // We'll need to use aggregation to search on customer name
+    const customerNameLoans = await Loan.aggregate([
+      {
+        $lookup: {
+          from: 'customers', // The collection to join
+          localField: 'customer',
+          foreignField: '_id',
+          as: 'customerData'
+        }
+      },
+      {
+        $match: {
+          'customerData.name': { $regex: req.query.search, $options: 'i' }
+        }
+      },
+      {
+        $project: {
+          _id: 1 // Only need the IDs for the next query
+        }
+      }
+    ]);
+
+    // Get array of loan IDs where customer name matches
+    const customerMatchIds = customerNameLoans.map(loan => loan._id);
+
+    // Use $or to match either loan number or loans by customer name
+    query = Loan.find({
+      $or: [
+        loanNumberQuery,
+        { _id: { $in: customerMatchIds } }
+      ]
     });
+  }
+  
+  // Populate references
+  query = query.populate({
+    path: 'customer',
+    select: 'name phone'
+  }).populate({
+    path: 'createdBy',
+    select: 'name'
+  });
 
   // Select Fields
   if (req.query.select) {
@@ -51,7 +93,44 @@ exports.getLoans = asyncHandler(async (req, res, next) => {
   const limit = parseInt(req.query.limit, 10) || 25;
   const startIndex = (page - 1) * limit;
   const endIndex = page * limit;
-  const total = await Loan.countDocuments(JSON.parse(queryStr));
+  
+  // Get total count with same filters
+  let totalQuery = {...JSON.parse(queryStr)};
+  
+  // Apply the same search filters for counting
+  if (req.query.search) {
+    const customerNameLoans = await Loan.aggregate([
+      {
+        $lookup: {
+          from: 'customers',
+          localField: 'customer',
+          foreignField: '_id',
+          as: 'customerData'
+        }
+      },
+      {
+        $match: {
+          'customerData.name': { $regex: req.query.search, $options: 'i' }
+        }
+      },
+      {
+        $project: {
+          _id: 1
+        }
+      }
+    ]);
+    
+    const customerMatchIds = customerNameLoans.map(loan => loan._id);
+    
+    totalQuery = {
+      $or: [
+        { loanNumber: { $regex: req.query.search, $options: 'i' } },
+        { _id: { $in: customerMatchIds } }
+      ]
+    };
+  }
+  
+  const total = await Loan.countDocuments(totalQuery);
 
   query = query.skip(startIndex).limit(limit);
 
@@ -74,6 +153,8 @@ exports.getLoans = asyncHandler(async (req, res, next) => {
       limit
     };
   }
+
+  pagination.total = total;
 
   res.status(200).json({
     success: true,
@@ -366,6 +447,86 @@ exports.getLoanStats = asyncHandler(async (req, res, next) => {
   });
 });
 
+// @desc    Remove payment from loan
+// @route   DELETE /api/loans/:id/payments/:paymentId
+// @access  Private/Admin
+exports.removePayment = asyncHandler(async (req, res, next) => {
+  const loan = await Loan.findById(req.params.id);
+
+  if (!loan) {
+    return res.status(404).json({
+      success: false,
+      error: 'Loan not found'
+    });
+  }
+
+  // Find the payment by ID
+  const payment = loan.payments.id(req.params.paymentId);
+  
+  if (!payment) {
+    return res.status(404).json({
+      success: false,
+      error: 'Payment not found'
+    });
+  }
+
+  // Remove the payment
+  payment.deleteOne();
+  
+  // Update loan status if needed
+  const totalPaid = loan.payments.reduce((sum, payment) => sum + payment.amount, 0);
+  
+  // Calculate interest
+  const startDate = new Date(loan.startDate);
+  const today = new Date();
+  const monthsDiff = (today.getFullYear() - startDate.getFullYear()) * 12 + 
+                    today.getMonth() - startDate.getMonth();
+  
+  // Compound interest formula: A = P(1 + r/n)^(nt)
+  // Where: A = final amount, P = principal, r = interest rate, n = compounding frequency, t = time in years
+  const monthlyRate = loan.interestRate / 100 / 12;
+  const interestAmount = loan.totalLoanAmount * Math.pow(1 + monthlyRate, monthsDiff) - loan.totalLoanAmount;
+  
+  // Total amount to be paid with interest
+  const totalAmountDue = loan.totalLoanAmount + interestAmount;
+  
+  if (totalPaid < totalAmountDue && loan.status === 'Closed') {
+    loan.status = 'Active';
+  }
+
+  await loan.save();
+
+  res.status(200).json({
+    success: true,
+    data: loan
+  });
+});
+
+// @desc    Calculate current loan amount
+// @route   GET /api/loans/:id/calculate
+// @access  Private
+exports.calculateLoan = asyncHandler(async (req, res, next) => {
+  const loan = await Loan.findById(req.params.id);
+
+  if (!loan) {
+    return res.status(404).json({
+      success: false,
+      error: 'Loan not found'
+    });
+  }
+
+  // Use the model's calculateCurrentAmount method with simple interest
+  const calculation = loan.calculateCurrentAmount();
+
+  // Add additional info for the frontend
+  calculation.monthlyInterestRate = loan.interestRate;
+  calculation.monthlyInterestAmount = calculation.remainingPrincipal * (loan.interestRate / 100);
+
+  res.status(200).json({
+    success: true,
+    data: calculation
+  });
+});
 // @desc    Remove payment from loan
 // @route   DELETE /api/loans/:id/payments/:paymentId
 // @access  Private/Admin

@@ -10,7 +10,7 @@ exports.getSuppliers = asyncHandler(async (req, res, next) => {
   const reqQuery = { ...req.query };
 
   // Fields to exclude
-  const removeFields = ['select', 'sort', 'page', 'limit'];
+  const removeFields = ['select', 'sort', 'page', 'limit', 'searchTerm'];
 
   // Loop over removeFields and delete them from reqQuery
   removeFields.forEach(param => delete reqQuery[param]);
@@ -21,8 +21,22 @@ exports.getSuppliers = asyncHandler(async (req, res, next) => {
   // Create operators ($gt, $gte, etc)
   queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
 
+  // Parse query into object
+  let queryObj = JSON.parse(queryStr);
+
+  // Add search term filter if provided (search by supplier name or purchase number)
+  if (req.query.searchTerm) {
+    queryObj = {
+      ...queryObj,
+      $or: [
+        { purchaseNumber: { $regex: req.query.searchTerm, $options: 'i' } },
+        { 'supplier.name': { $regex: req.query.searchTerm, $options: 'i' } }
+      ]
+    };
+  }
+
   // Finding resource
-  let query = Supplier.find(JSON.parse(queryStr))
+  let query = Supplier.find(queryObj)
     .populate({
       path: 'createdBy',
       select: 'name'
@@ -47,7 +61,7 @@ exports.getSuppliers = asyncHandler(async (req, res, next) => {
   const limit = parseInt(req.query.limit, 10) || 25;
   const startIndex = (page - 1) * limit;
   const endIndex = page * limit;
-  const total = await Supplier.countDocuments(JSON.parse(queryStr));
+  const total = await Supplier.countDocuments(queryObj);
 
   query = query.skip(startIndex).limit(limit);
 
@@ -75,6 +89,7 @@ exports.getSuppliers = asyncHandler(async (req, res, next) => {
     success: true,
     count: suppliers.length,
     pagination,
+    total,
     data: suppliers
   });
 });

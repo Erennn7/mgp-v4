@@ -32,14 +32,28 @@ const Customers = () => {
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [customerFormData, setCustomerFormData] = useState(null);
+  const [totalCustomers, setTotalCustomers] = useState(0);
+  const [paginationModel, setPaginationModel] = useState({
+    pageSize: 100,
+    page: 0,
+  });
   const navigate = useNavigate();
 
   // Fetch customers
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/customers');
+      const response = await api.get('/customers', {
+        params: {
+          limit: paginationModel.pageSize,
+          page: paginationModel.page + 1 // API uses 1-based pagination
+        }
+      });
       setCustomers(response.data.data);
+      // Set total count from pagination data
+      if (response.data.pagination) {
+        setTotalCustomers(response.data.total || response.data.data.length);
+      }
       setError(null);
     } catch (err) {
       setError('Failed to load customers');
@@ -51,7 +65,7 @@ const Customers = () => {
 
   useEffect(() => {
     fetchCustomers();
-  }, []);
+  }, [paginationModel.page, paginationModel.pageSize]);
 
   // Handle view customer
   const handleViewCustomer = (customerId) => {
@@ -235,6 +249,13 @@ const Customers = () => {
         error={error}
         getRowId={(row) => row._id}
         height={600}
+        pageSize={paginationModel.pageSize}
+        pagination={true}
+        paginationMode="server"
+        paginationModel={paginationModel}
+        onPaginationModelChange={setPaginationModel}
+        pageSizeOptions={[25, 50, 100]}
+        rowCount={totalCustomers}
       />
 
       {/* Add/Edit Customer Form */}

@@ -5,7 +5,6 @@ import {
   Typography, 
   Paper, 
   Button, 
-  TextField, 
   InputAdornment,
   Grid,
   Chip,
@@ -25,9 +24,9 @@ import {
   Visibility as ViewIcon,
   Edit as EditIcon
 } from '@mui/icons-material';
-import { DataGrid } from '@mui/x-data-grid';
 import { format } from 'date-fns';
 import PageHeader from '../../components/Common/PageHeader';
+import DataTable from '../../components/Common/DataTable';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useSnackbar } from '../../context/SnackbarContext';
@@ -40,11 +39,10 @@ const Loans = () => {
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [totalLoans, setTotalLoans] = useState(0);
   const [paginationModel, setPaginationModel] = useState({
-    pageSize: 10,
+    pageSize: 100,
     page: 0,
   });
 
@@ -55,10 +53,6 @@ const Loans = () => {
       const params = new URLSearchParams();
       params.append('page', paginationModel.page + 1);
       params.append('limit', paginationModel.pageSize);
-      
-      if (searchTerm) {
-        params.append('loanNumber', searchTerm);
-      }
       
       if (statusFilter) {
         params.append('status', statusFilter);
@@ -79,15 +73,7 @@ const Loans = () => {
 
   useEffect(() => {
     fetchLoans();
-  }, [paginationModel.page, paginationModel.pageSize, searchTerm, statusFilter]);
-
-  const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
-    setPaginationModel({
-      ...paginationModel,
-      page: 0,
-    });
-  };
+  }, [paginationModel.page, paginationModel.pageSize, statusFilter]);
 
   const handleStatusFilterChange = (event) => {
     setStatusFilter(event.target.value);
@@ -98,7 +84,6 @@ const Loans = () => {
   };
 
   const clearFilters = () => {
-    setSearchTerm('');
     setStatusFilter('');
     setPaginationModel({
       ...paginationModel,
@@ -208,6 +193,26 @@ const Loans = () => {
     },
   ];
 
+  // Custom search function for client-side filtering
+  const customSearchFunction = (row, term) => {
+    if (!term) return true;
+    
+    const lowerTerm = term.toLowerCase();
+    
+    // Search in loan number
+    if (row.loanNumber && row.loanNumber.toLowerCase().includes(lowerTerm)) {
+      return true;
+    }
+    
+    // Search in customer name
+    if (row.customer && row.customer.name && 
+        row.customer.name.toLowerCase().includes(lowerTerm)) {
+      return true;
+    }
+    
+    return false;
+  };
+
   return (
     <>
       <PageHeader 
@@ -227,32 +232,7 @@ const Loans = () => {
       
       <Paper elevation={1} sx={{ p: 3, borderRadius: 2, mb: 3 }}>
         <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
-          <Grid item xs={12} md={4}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              label="Search Loan Number"
-              value={searchTerm}
-              onChange={handleSearchChange}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-                endAdornment: searchTerm && (
-                  <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setSearchTerm('')}>
-                      <ClearIcon fontSize="small" />
-                    </IconButton>
-                  </InputAdornment>
-                )
-              }}
-              size="small"
-            />
-          </Grid>
-          
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={6}>
             <FormControl fullWidth variant="outlined" size="small">
               <InputLabel>Status</InputLabel>
               <Select
@@ -269,12 +249,12 @@ const Loans = () => {
             </FormControl>
           </Grid>
           
-          <Grid item xs={12} md={2}>
+          <Grid item xs={12} md={3}>
             <Button
               variant="outlined"
               startIcon={<ClearIcon />}
               onClick={clearFilters}
-              disabled={!searchTerm && !statusFilter}
+              disabled={!statusFilter}
               fullWidth
               size="medium"
             >
@@ -284,7 +264,7 @@ const Loans = () => {
         </Grid>
 
         <Box sx={{ height: 500, width: '100%' }}>
-          {loading ? (
+          {loading && loans.length === 0 ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
               <CircularProgress />
             </Box>
@@ -300,18 +280,23 @@ const Loans = () => {
               </Button>
             </Box>
           ) : (
-            <DataGrid
+            <DataTable
               rows={loans}
               columns={columns}
-              pagination
+              loading={loading}
+              error={error}
+              getRowId={(row) => row._id}
+              height={500}
+              pageSize={paginationModel.pageSize}
+              pagination={true}
               paginationMode="server"
-              rowCount={totalLoans}
               paginationModel={paginationModel}
               onPaginationModelChange={setPaginationModel}
-              pageSizeOptions={[5, 10, 25, 50]}
-              getRowId={(row) => row._id}
-              loading={loading}
-              disableRowSelectionOnClick
+              pageSizeOptions={[25, 50, 100]}
+              rowCount={totalLoans}
+              quickSearch={true}
+              quickSearchField="custom"
+              customSearchFunction={customSearchFunction}
               sx={{
                 '& .MuiDataGrid-columnHeaders': {
                   backgroundColor: 'rgba(92, 107, 192, 0.08)',

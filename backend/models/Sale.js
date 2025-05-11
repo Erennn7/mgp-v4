@@ -65,9 +65,21 @@ const SaleSchema = new mongoose.Schema({
     required: true
   },
   items: [SaleItemSchema],
+  itemsTotal: {
+    type: Number,
+    required: true
+  },
   subTotal: {
     type: Number,
     required: true
+  },
+  makingChargesPercentage: {
+    type: Number,
+    default: 0
+  },
+  makingChargesAmount: {
+    type: Number,
+    default: 0
   },
   tax: {
     type: Number,

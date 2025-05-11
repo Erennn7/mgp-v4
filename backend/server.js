@@ -38,6 +38,7 @@ app.use('/api/rates', require('./routes/rates'));
 app.use('/api/purchases', require('./routes/purchases'));
 app.use('/api/suppliers', require('./routes/suppliers'));
 app.use('/api/reports', require('./routes/reports'));
+app.use('/api/product-types', require('./routes/productTypes'));
 
 // Error handling middleware
 app.use(errorHandler);

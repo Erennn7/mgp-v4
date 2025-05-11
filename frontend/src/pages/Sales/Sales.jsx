@@ -22,6 +22,7 @@ import StatusChip from '../../components/Common/StatusChip';
 import SaleForm from './SaleForm';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
+import SearchBox from '../../components/Common/SearchBox';
 
 const Sales = () => {
   const [sales, setSales] = useState([]);
@@ -32,14 +33,29 @@ const Sales = () => {
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [saleFormData, setSaleFormData] = useState(null);
+  const [totalSales, setTotalSales] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [paginationModel, setPaginationModel] = useState({
+    pageSize: 100,
+    page: 0,
+  });
   const navigate = useNavigate();
 
   // Fetch sales
   const fetchSales = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/sales');
+      const response = await api.get('/sales', {
+        params: {
+          limit: paginationModel.pageSize,
+          page: paginationModel.page + 1 // API uses 1-based pagination
+        }
+      });
       setSales(response.data.data);
+      // Set total count from pagination data
+      if (response.data.pagination) {
+        setTotalSales(response.data.total || response.data.data.length);
+      }
       setError(null);
     } catch (err) {
       setError('Failed to load sales');
@@ -51,7 +67,7 @@ const Sales = () => {
 
   useEffect(() => {
     fetchSales();
-  }, []);
+  }, [paginationModel.page, paginationModel.pageSize]);
 
   // Handle view sale
   const handleViewSale = (saleId) => {
@@ -283,6 +299,47 @@ const Sales = () => {
         error={error}
         getRowId={(row) => row._id}
         height={600}
+        pageSize={paginationModel.pageSize}
+        pagination={true}
+        paginationMode="server"
+        paginationModel={paginationModel}
+        onPaginationModelChange={setPaginationModel}
+        pageSizeOptions={[25, 50, 100]}
+        rowCount={totalSales}
+        quickSearch={true}
+        quickSearchField="custom"
+        customSearchFunction={(row, term) => {
+          // If no search term, include the row
+          if (!term) return true;
+          
+          // Use the component's search term state
+          const lowerSearchTerm = term.toLowerCase();
+          
+          // Check in invoice number
+          if (row.invoiceNumber && row.invoiceNumber.toLowerCase().includes(lowerSearchTerm)) {
+            return true;
+          }
+          
+          // Check in customer name
+          if (row.customer && row.customer.name && 
+              row.customer.name.toLowerCase().includes(lowerSearchTerm)) {
+            return true;
+          }
+          
+          // Check in payment status
+          if (row.paymentStatus && row.paymentStatus.toLowerCase().includes(lowerSearchTerm)) {
+            return true;
+          }
+          
+          // Check for amount matches
+          const totalStr = row.total?.toString();
+          if (totalStr && totalStr.includes(term)) {
+            return true;
+          }
+          
+          // No matches found
+          return false;
+        }}
       />
 
       {/* Add/Edit Sale Form */}

@@ -10,7 +10,7 @@ exports.getSavings = asyncHandler(async (req, res, next) => {
   const reqQuery = { ...req.query };
 
   // Fields to exclude
-  const removeFields = ['select', 'sort', 'page', 'limit'];
+  const removeFields = ['select', 'sort', 'page', 'limit', 'search'];
 
   // Loop over removeFields and delete them from reqQuery
   removeFields.forEach(param => delete reqQuery[param]);
@@ -22,19 +22,62 @@ exports.getSavings = asyncHandler(async (req, res, next) => {
   queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
 
   // Finding resource
-  let query = Saving.find(JSON.parse(queryStr))
-    .populate({
-      path: 'customer',
-      select: 'name phone'
-    })
-    .populate({
-      path: 'createdBy',
-      select: 'name'
-    })
-    .populate({
-      path: 'installments.recordedBy',
-      select: 'name'
+  let query = Saving.find(JSON.parse(queryStr));
+  
+  // Handle search by scheme number or customer name
+  if (req.query.search) {
+    // Search by scheme number first
+    const schemeNumberQuery = { 
+      schemeNumber: { $regex: req.query.search, $options: 'i' } 
+    };
+
+    // We'll need to use aggregation to search on customer name
+    const customerNameSavings = await Saving.aggregate([
+      {
+        $lookup: {
+          from: 'customers', // The collection to join
+          localField: 'customer',
+          foreignField: '_id',
+          as: 'customerData'
+        }
+      },
+      {
+        $match: {
+          'customerData.name': { $regex: req.query.search, $options: 'i' }
+        }
+      },
+      {
+        $project: {
+          _id: 1 // Only need the IDs for the next query
+        }
+      }
+    ]);
+
+    // Get array of saving IDs where customer name matches
+    const customerMatchIds = customerNameSavings.map(saving => saving._id);
+
+    // Use $or to match either scheme number or savings by customer name
+    query = Saving.find({
+      $or: [
+        schemeNumberQuery,
+        { _id: { $in: customerMatchIds } }
+      ]
     });
+  }
+  
+  // Continue with populate
+  query = query.populate({
+    path: 'customer',
+    select: 'name phone'
+  })
+  .populate({
+    path: 'createdBy',
+    select: 'name'
+  })
+  .populate({
+    path: 'installments.recordedBy',
+    select: 'name'
+  });
 
   // Select Fields
   if (req.query.select) {
@@ -55,7 +98,44 @@ exports.getSavings = asyncHandler(async (req, res, next) => {
   const limit = parseInt(req.query.limit, 10) || 25;
   const startIndex = (page - 1) * limit;
   const endIndex = page * limit;
-  const total = await Saving.countDocuments(JSON.parse(queryStr));
+  
+  // Get total count with same filters
+  let totalQuery = {...JSON.parse(queryStr)};
+  
+  // Apply the same search filters for counting
+  if (req.query.search) {
+    const customerNameSavings = await Saving.aggregate([
+      {
+        $lookup: {
+          from: 'customers',
+          localField: 'customer',
+          foreignField: '_id',
+          as: 'customerData'
+        }
+      },
+      {
+        $match: {
+          'customerData.name': { $regex: req.query.search, $options: 'i' }
+        }
+      },
+      {
+        $project: {
+          _id: 1
+        }
+      }
+    ]);
+    
+    const customerMatchIds = customerNameSavings.map(saving => saving._id);
+    
+    totalQuery = {
+      $or: [
+        { schemeNumber: { $regex: req.query.search, $options: 'i' } },
+        { _id: { $in: customerMatchIds } }
+      ]
+    };
+  }
+  
+  const total = await Saving.countDocuments(totalQuery);
 
   query = query.skip(startIndex).limit(limit);
 
@@ -78,6 +158,8 @@ exports.getSavings = asyncHandler(async (req, res, next) => {
       limit
     };
   }
+  
+  pagination.total = total;
 
   res.status(200).json({
     success: true,

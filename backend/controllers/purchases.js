@@ -10,7 +10,7 @@ exports.getPurchases = asyncHandler(async (req, res, next) => {
   const reqQuery = { ...req.query };
 
   // Fields to exclude
-  const removeFields = ['select', 'sort', 'page', 'limit'];
+  const removeFields = ['select', 'sort', 'page', 'limit', 'searchTerm'];
 
   // Loop over removeFields and delete them from reqQuery
   removeFields.forEach(param => delete reqQuery[param]);
@@ -21,8 +21,22 @@ exports.getPurchases = asyncHandler(async (req, res, next) => {
   // Create operators ($gt, $gte, etc)
   queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
 
+  // Base query object
+  let queryObj = JSON.parse(queryStr);
+
+  // Add search term filter if provided (search by purchase number or vendor name)
+  if (req.query.searchTerm) {
+    queryObj = {
+      ...queryObj,
+      $or: [
+        { purchaseNumber: { $regex: req.query.searchTerm, $options: 'i' } },
+        { 'vendor.name': { $regex: req.query.searchTerm, $options: 'i' } }
+      ]
+    };
+  }
+
   // Finding resource
-  let query = Purchase.find(JSON.parse(queryStr))
+  let query = Purchase.find(queryObj)
     .populate({
       path: 'createdBy',
       select: 'name'
@@ -47,7 +61,7 @@ exports.getPurchases = asyncHandler(async (req, res, next) => {
   const limit = parseInt(req.query.limit, 10) || 25;
   const startIndex = (page - 1) * limit;
   const endIndex = page * limit;
-  const total = await Purchase.countDocuments(JSON.parse(queryStr));
+  const total = await Purchase.countDocuments(queryObj);
 
   query = query.skip(startIndex).limit(limit);
 
@@ -75,6 +89,7 @@ exports.getPurchases = asyncHandler(async (req, res, next) => {
     success: true,
     count: purchases.length,
     pagination,
+    total,
     data: purchases
   });
 });
@@ -268,4 +283,30 @@ exports.getPurchaseStats = asyncHandler(async (req, res, next) => {
       topVendors
     }
   });
-}); 
+});
+
+// @desc    Get purchases by supplier
+// @route   GET /api/purchases/supplier/:id
+// @access  Private
+exports.getPurchasesBySupplier = asyncHandler(async (req, res, next) => {
+  // First get the customer to find their name
+  const Customer = require('../models/Customer');
+  const customer = await Customer.findById(req.params.id);
+  
+  if (!customer) {
+    return res.status(404).json({
+      success: false,
+      error: 'Customer not found'
+    });
+  }
+  
+  // Find purchases where vendor.name matches customer name
+  const purchases = await Purchase.find({ 'vendor.name': customer.name })
+    .sort('-purchaseDate');
+
+  res.status(200).json({
+    success: true,
+    count: purchases.length,
+    data: purchases
+  });
+});

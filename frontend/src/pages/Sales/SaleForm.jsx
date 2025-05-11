@@ -61,7 +61,10 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
     invoiceNumber: '',
     customer: '',
     items: [],
+    itemsTotal: 0,
     subTotal: 0,
+    makingChargesPercentage: 5, // Default to 5%
+    makingChargesAmount: 0,
     tax: 0,
     discount: 0,
     total: 0,
@@ -126,7 +129,10 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
         invoiceNumber: initialData.invoiceNumber || '',
         customer: initialData.customer?._id || initialData.customer || '',
         items: initialData.items || [],
+        itemsTotal: initialData.itemsTotal || 0,
         subTotal: initialData.subTotal || 0,
+        makingChargesPercentage: initialData.makingChargesPercentage || 0,
+        makingChargesAmount: initialData.makingChargesAmount || 0,
         tax: initialData.tax || 0,
         discount: initialData.discount || 0,
         total: initialData.total || 0,
@@ -139,6 +145,11 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
       // Generate a temporary invoice number if this is a new sale
       generateInvoiceNumber();
     }
+
+    // Force calculation of totals after loading data or initializing
+    setTimeout(() => {
+      calculateTotals();
+    }, 0);
   }, [initialData]);
 
   // Fetch customers and products on component mount
@@ -148,10 +159,10 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
     fetchLatestRates();
   }, []);
 
-  // Recalculate totals when items, tax, or discount changes
+  // Recalculate totals when items, tax, discount, or making charges percentage changes
   useEffect(() => {
     calculateTotals();
-  }, [formData.items, formData.tax, formData.discount]);
+  }, [formData.items, formData.tax, formData.discount, formData.makingChargesPercentage]);
 
   // Calculate price when custom product details change
   useEffect(() => {
@@ -223,8 +234,8 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
       // Base metal value calculation
       const metalValue = customProduct.netWeight * ratePerGram;
       
-      // Calculate making charges (applied only to the metal value)
-      const makingChargesAmount = customProduct.makingCharges ? (metalValue * customProduct.makingCharges / 100) : 0;
+      // Calculate making charges using the global making charges percentage
+      const makingChargesAmount = (metalValue * formData.makingChargesPercentage) / 100;
       
       // Add stone price if product has stones
       const stonePrice = customProduct.hasStone && customProduct.stonePrice ? parseFloat(customProduct.stonePrice) : 0;
@@ -261,57 +272,101 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
   const fetchProducts = async () => {
     setLoadingProducts(true);
     try {
-      const response = await api.get('/products');
-      if (response.data.success) {
-        // Get latest rates for price calculation
-        const ratesResponse = await api.get('/rates/latest');
-        const latestRates = ratesResponse.data.success ? ratesResponse.data.data : [];
-        
-        // Calculate price for each product
-        const productsWithPrices = response.data.data.map(product => {
-          // Default price to 0
-          let calculatedPrice = 0;
-          let ratePerGram = 0;
-          
-          // Only calculate for products with both category and purity
-          if (product.category && product.purity && product.netWeight) {
-            // Determine metal type from category
-            const metal = product.category.includes('Gold') ? 'Gold' : 'Silver';
+      // Fetch all products with proper pagination
+      let allProducts = [];
+      let page = 1;
+      let hasMoreProducts = true;
+      
+      // Keep fetching until we have all products
+      while (hasMoreProducts) {
+        try {
+          const response = await api.get(`/products?page=${page}&limit=100`);
+          if (response.data.success) {
+            const fetchedProducts = response.data.data;
             
-            // Find matching rate
-            const rateInfo = latestRates.find(r => r.metal === metal && r.purity === product.purity);
+            // Add products to our collection
+            allProducts = [...allProducts, ...fetchedProducts];
             
-            if (rateInfo) {
-              // Store the rate per gram directly from rates section
-              ratePerGram = rateInfo.ratePerGram;
-              
-              // Base metal value calculation
-              const metalValue = product.netWeight * ratePerGram;
-              
-              // Calculate making charges (applied only to the metal value)
-              const makingChargesAmount = product.makingCharges ? (metalValue * product.makingCharges / 100) : 0;
-              
-              // Add stone price if product has stones
-              const stonePrice = product.hasStone && product.stonePrice ? product.stonePrice : 0;
-              
-              // Final price = Metal value + Making charges on metal + Stone price
-              calculatedPrice = metalValue + makingChargesAmount + stonePrice;
+            // Check if we need to fetch more products
+            if (fetchedProducts.length < 100) {
+              hasMoreProducts = false;
+            } else {
+              page++;
             }
+          } else {
+            hasMoreProducts = false;
+            console.warn('Product fetch returned success: false');
           }
-          
-          // Return product with calculated price and rate per gram
-          return {
-            ...product,
-            price: calculatedPrice,
-            ratePerGram: ratePerGram
-          };
-        });
+        } catch (pageError) {
+          console.error(`Error fetching products page ${page}:`, pageError);
+          hasMoreProducts = false;
+          // Continue with products we've already loaded
+        }
+      }
+      
+      if (allProducts.length === 0) {
+        console.warn('No products found in the database');
+        setProducts([]);
+        toast.warn('No products found in inventory');
+        return;
+      }
+      
+      // Get latest rates for price calculation
+      const ratesResponse = await api.get('/rates/latest');
+      const latestRates = ratesResponse.data.success ? ratesResponse.data.data : [];
+      
+      // Calculate price for each product
+      const productsWithPrices = allProducts.map(product => {
+        // Default price to 0
+        let calculatedPrice = 0;
+        let ratePerGram = 0;
         
-        setProducts(productsWithPrices.filter(p => p.stock > 0));
+        // Only calculate for products with both category and purity
+        if (product.category && product.purity && product.netWeight) {
+          // Determine metal type from category
+          const metal = product.category.includes('Gold') ? 'Gold' : 'Silver';
+          
+          // Find matching rate
+          const rateInfo = latestRates.find(r => r.metal === metal && r.purity === product.purity);
+          
+          if (rateInfo) {
+            // Store the rate per gram directly from rates section
+            ratePerGram = rateInfo.ratePerGram;
+            
+            // Base metal value calculation
+            const metalValue = product.netWeight * ratePerGram;
+            
+            // Calculate making charges (applied only to the metal value)
+            const makingChargesAmount = product.makingCharges ? (metalValue * product.makingCharges / 100) : 0;
+            
+            // Add stone price if product has stones
+            const stonePrice = product.hasStone && product.stonePrice ? product.stonePrice : 0;
+            
+            // Final price = Metal value + Making charges on metal + Stone price
+            calculatedPrice = metalValue + makingChargesAmount + stonePrice;
+          }
+        }
+        
+        // Return product with calculated price and rate per gram
+        return {
+          ...product,
+          price: calculatedPrice,
+          ratePerGram: ratePerGram
+        };
+      });
+      
+      const availableProducts = productsWithPrices.filter(p => p.stock > 0);
+      setProducts(availableProducts);
+      
+      if (availableProducts.length === 0) {
+        toast.warn('No products with available stock found');
+      } else {
+        console.log(`Loaded ${availableProducts.length} products with available stock`);
       }
     } catch (err) {
       console.error('Error fetching products:', err);
       toast.error('Failed to load products');
+      setProducts([]);
     } finally {
       setLoadingProducts(false);
     }
@@ -323,12 +378,17 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
     
     // Handle special number fields
     let parsedValue = value;
-    if (['tax', 'discount', 'amountPaid'].includes(name) && value !== '') {
+    if (['tax', 'discount', 'amountPaid', 'makingChargesPercentage'].includes(name) && value !== '') {
       parsedValue = parseFloat(value);
       if (isNaN(parsedValue)) parsedValue = 0;
       
       // Limit tax percentage to a reasonable range (0-100%)
       if (name === 'tax') {
+        parsedValue = Math.max(0, Math.min(100, parsedValue));
+      }
+      
+      // Limit making charges percentage to a reasonable range (0-100%)
+      if (name === 'makingChargesPercentage') {
         parsedValue = Math.max(0, Math.min(100, parsedValue));
       }
       
@@ -356,6 +416,11 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
         ...errors,
         [name]: ''
       });
+    }
+    
+    // Recalculate totals when making charges percentage changes
+    if (name === 'makingChargesPercentage') {
+      setTimeout(() => calculateTotals(), 10);
     }
   };
 
@@ -418,7 +483,7 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
     
     // Calculate total for this item based on rate per gram, weight and making charges
     const metalValue = currentProduct.netWeight * currentProduct.ratePerGram;
-    const makingChargesPercent = currentProduct.makingCharges || 0;
+    const makingChargesPercent = currentProduct.makingCharges || formData.makingChargesPercentage || 0;
     const makingChargesAmount = makingChargesPercent ? (metalValue * makingChargesPercent / 100) : 0;
     const stonePrice = currentProduct.hasStone && currentProduct.stonePrice ? 
       currentProduct.stonePrice : 0;
@@ -496,13 +561,20 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
 
   // Calculate subtotal, tax, and total
   const calculateTotals = () => {
-    // Calculate subtotal (sum of all item totals)
-    const subTotal = formData.items.reduce(
+    // Calculate items total (sum of all item totals)
+    const itemsTotal = formData.items.reduce(
       (sum, item) => sum + item.total,
       0
     );
     
-    // Calculate GST amount based on percentage
+    // Calculate making charges amount based on percentage of items total
+    const makingChargesPercentage = parseFloat(formData.makingChargesPercentage) || 0;
+    const makingChargesAmount = (itemsTotal * makingChargesPercentage) / 100;
+    
+    // Calculate subtotal (items total + making charges)
+    const subTotal = itemsTotal + makingChargesAmount;
+    
+    // Calculate GST amount based on percentage of subtotal
     const gstPercentage = formData.tax || 0;
     const gstAmount = (subTotal * gstPercentage) / 100;
     
@@ -512,9 +584,22 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
     // Calculate final total
     const total = Math.max(0, subTotal + gstAmount - discountAmount);
     
+    console.log('Calculation details:', {
+      itemsTotal,
+      makingChargesPercentage,
+      makingChargesAmount,
+      subTotal,
+      gstPercentage,
+      gstAmount,
+      discountAmount,
+      total
+    });
+    
     const updatedFormData = {
       ...formData,
+      itemsTotal,
       subTotal,
+      makingChargesAmount,
       total,
       amountPaid: formData.paymentStatus === 'Paid' ? total : formData.amountPaid
     };
@@ -674,7 +759,8 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
     
     // Calculate the metal value and making charges amount
     const metalValue = netWeight * ratePerGram;
-    const makingChargesPercent = customProduct.makingCharges || 0;
+    // Use the global making charges percentage from the form
+    const makingChargesPercent = formData.makingChargesPercentage || 0;
     const makingChargesAmount = makingChargesPercent ? (metalValue * makingChargesPercent / 100) : 0;
     const stonePrice = customProduct.hasStone && customProduct.stonePrice ? parseFloat(customProduct.stonePrice) : 0;
     
@@ -738,18 +824,14 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
       onFormDataChange(updatedFormData);
     }
     
-    // Default category and purity for reset
-    const defaultCategory = 'Gold Jewelry';
-    const defaultPurity = '22K';
-    
     // Reset custom product form and close dialog
     setCustomProduct({
       _id: 'custom-' + Date.now(),
       name: '',
-      category: defaultCategory,
+      category: 'Gold Jewelry',
       netWeight: 0,
       grossWeight: 0,
-      purity: defaultPurity,
+      purity: '22K',
       weightType: 'Gram',
       price: 0,
       ratePerGram: 0,
@@ -980,6 +1062,8 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
           fullWidth
           options={products}
           loading={loadingProducts}
+          loadingText="Loading all products..."
+          noOptionsText={loadingProducts ? "Fetching all products..." : "No products found"}
           getOptionLabel={(option) => {
             if (!option.name) return '';
             
@@ -991,6 +1075,11 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
           }}
           value={currentProduct}
           onChange={handleProductChange}
+          disableListWrap
+          ListboxProps={{
+            style: { maxHeight: '300px' },
+            className: 'virtualScrollList'
+          }}
           renderInput={(params) => (
             <TextField
               {...params}
@@ -1006,6 +1095,7 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
                   </>
                 ),
               }}
+              helperText={loadingProducts ? "Loading all products, please wait..." : ""}
             />
           )}
         />
@@ -1065,7 +1155,6 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
                 <TableCell align="right">Gross Weight</TableCell>
                 <TableCell align="right">Net Weight</TableCell>
                 <TableCell align="right">Rate/Gms</TableCell>
-                <TableCell align="right">Making</TableCell>
                 <TableCell align="right">Amount</TableCell>
                 <TableCell align="center">Action</TableCell>
               </TableRow>
@@ -1098,11 +1187,14 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
                     item._displayProduct.netWeight : 
                     item.product.netWeight || 0;
                   const makingChargesPercent = item.isCustomItem ?
-                    (item.customProductDetails?.makingCharges || 0) :
-                    (item.product.makingCharges || 0);
+                    (item.customProductDetails?.makingCharges || formData.makingChargesPercentage || 0) :
+                    (item.product.makingCharges || formData.makingChargesPercentage || 0);
                   const ratePerGram = item.rate || 0;
                   const metalValue = netWeight * ratePerGram;
                   const makingChargesAmount = (metalValue * makingChargesPercent / 100);
+                  
+                  // Calculate the subtotal (metal value + making charges)
+                  const itemSubtotal = metalValue + makingChargesAmount;
 
                   return (
                     <TableRow key={index}>
@@ -1126,9 +1218,8 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
                       </TableCell>
                       <TableCell align="right">{formatCurrency(item.rate)}</TableCell>
                       <TableCell align="right">
-                        {formatCurrency(makingChargesAmount)}
+                        {formatCurrency(itemSubtotal)}
                       </TableCell>
-                      <TableCell align="right">{formatCurrency(item.total)}</TableCell>
                       <TableCell align="center">
                         <IconButton
                           size="small"
@@ -1170,6 +1261,48 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
                   </InputAdornment>
                 ),
               }}
+            />
+          </Grid>
+          
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Making Charges (%)"
+              name="makingChargesPercentage"
+              type="number"
+              value={formData.makingChargesPercentage}
+              onChange={(e) => {
+                // Get the new value directly
+                const newValue = parseFloat(e.target.value) || 0;
+                
+                // Update form data with new making charges percentage
+                const updatedFormData = {
+                  ...formData,
+                  makingChargesPercentage: newValue
+                };
+                
+                // Set the updated form data
+                setFormData(updatedFormData);
+                
+                // Notify parent component about data change
+                if (onFormDataChange) {
+                  onFormDataChange(updatedFormData);
+                }
+                
+                // Force recalculation of totals
+                setTimeout(() => calculateTotals(), 0);
+              }}
+              disabled={loading}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <MoneyIcon />
+                  </InputAdornment>
+                ),
+                endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                inputProps: { min: 0, max: 100, step: 0.01 }
+              }}
+              helperText={`Amount: ${formatCurrency(formData.makingChargesAmount)}`}
             />
           </Grid>
           
@@ -1231,6 +1364,30 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
                 ),
               }}
             />
+          </Grid>
+
+          <Grid item xs={12}>
+            <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2, mt: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>Bill Summary</Typography>
+              <Grid container spacing={1}>
+                <Grid item xs={8}>Items Total:</Grid>
+                <Grid item xs={4} sx={{ textAlign: 'right' }}>{formatCurrency(formData.itemsTotal)}</Grid>
+                
+                <Grid item xs={8}>Making Charges ({formData.makingChargesPercentage}%):</Grid>
+                <Grid item xs={4} sx={{ textAlign: 'right' }}>{formatCurrency(formData.makingChargesAmount)}</Grid>
+                
+                <Grid item xs={8}>GST ({formData.tax}%):</Grid>
+                <Grid item xs={4} sx={{ textAlign: 'right' }}>{formatCurrency((formData.subTotal * formData.tax) / 100)}</Grid>
+                
+                <Grid item xs={8}>Discount:</Grid>
+                <Grid item xs={4} sx={{ textAlign: 'right' }}>{formatCurrency(formData.discount)}</Grid>
+                
+                <Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid>
+                
+                <Grid item xs={8}><Typography variant="subtitle2">Total Amount:</Typography></Grid>
+                <Grid item xs={4} sx={{ textAlign: 'right' }}><Typography variant="subtitle2">{formatCurrency(formData.total)}</Typography></Grid>
+              </Grid>
+            </Box>
           </Grid>
         </Grid>
       </Grid>
@@ -1488,20 +1645,6 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
                 onChange={handleCustomProductChange}
                 disabled={!!(customProduct.netWeight > 0 && customProduct.purity)}
                 helperText={customProduct.netWeight > 0 && customProduct.purity ? "Auto-calculated based on rate" : ""}
-              />
-            </Grid>
-            
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="Making Charges (%)"
-                name="makingCharges"
-                type="number"
-                value={customProduct.makingCharges}
-                onChange={handleCustomProductChange}
-                InputProps={{
-                  endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                }}
               />
             </Grid>
             

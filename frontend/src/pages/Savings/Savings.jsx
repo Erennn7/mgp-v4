@@ -30,9 +30,9 @@ import {
   ShoppingCart as RedeemIcon,
   Receipt as ReportIcon
 } from '@mui/icons-material';
-import { DataGrid } from '@mui/x-data-grid';
 import { format } from 'date-fns';
 import PageHeader from '../../components/Common/PageHeader';
+import DataTable from '../../components/Common/DataTable';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useSnackbar } from '../../context/SnackbarContext';
@@ -45,12 +45,11 @@ const Savings = () => {
   const [savings, setSavings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [totalSavings, setTotalSavings] = useState(0);
   const [tabValue, setTabValue] = useState(0);
   const [paginationModel, setPaginationModel] = useState({
-    pageSize: 10,
+    pageSize: 100,
     page: 0,
   });
 
@@ -61,10 +60,6 @@ const Savings = () => {
       const params = new URLSearchParams();
       params.append('page', paginationModel.page + 1);
       params.append('limit', paginationModel.pageSize);
-      
-      if (searchTerm) {
-        params.append('schemeNumber', searchTerm);
-      }
       
       if (statusFilter) {
         params.append('status', statusFilter);
@@ -97,16 +92,8 @@ const Savings = () => {
 
   useEffect(() => {
     fetchSavings();
-  }, [paginationModel.page, paginationModel.pageSize, searchTerm, statusFilter, tabValue]);
-
-  const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
-    setPaginationModel({
-      ...paginationModel,
-      page: 0,
-    });
-  };
-
+  }, [paginationModel.page, paginationModel.pageSize, statusFilter, tabValue]);
+  
   const handleStatusFilterChange = (event) => {
     setStatusFilter(event.target.value);
     setPaginationModel({
@@ -124,7 +111,6 @@ const Savings = () => {
   };
 
   const clearFilters = () => {
-    setSearchTerm('');
     setStatusFilter('');
     setPaginationModel({
       ...paginationModel,
@@ -312,6 +298,31 @@ const Savings = () => {
     { value: 'Defaulted', label: 'Defaulted' },
   ];
 
+  // Custom search function for client-side filtering
+  const customSearchFunction = (row, term) => {
+    if (!term) return true;
+    
+    const lowerTerm = term.toLowerCase();
+    
+    // Search in scheme number
+    if (row.schemeNumber && row.schemeNumber.toLowerCase().includes(lowerTerm)) {
+      return true;
+    }
+    
+    // Search in customer name
+    if (row.customer && row.customer.name && 
+        row.customer.name.toLowerCase().includes(lowerTerm)) {
+      return true;
+    }
+    
+    // Search in scheme name
+    if (row.schemeName && row.schemeName.toLowerCase().includes(lowerTerm)) {
+      return true;
+    }
+    
+    return false;
+  };
+
   return (
     <Box>
       <PageHeader 
@@ -339,30 +350,6 @@ const Savings = () => {
         </Box>
         
         <Grid container spacing={1} alignItems="center" sx={{ mb: 2 }}>
-          <Grid item xs={12} md={4}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              label="Search Scheme Number"
-              value={searchTerm}
-              onChange={handleSearchChange}
-              size="small"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-                endAdornment: searchTerm && (
-                  <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setSearchTerm('')}>
-                      <ClearIcon fontSize="small" />
-                    </IconButton>
-                  </InputAdornment>
-                )
-              }}
-            />
-          </Grid>
           <Grid item xs={12} md={3}>
             <FormControl fullWidth variant="outlined" size="small">
               <InputLabel id="status-filter-label">Status</InputLabel>
@@ -386,7 +373,7 @@ const Savings = () => {
             </FormControl>
           </Grid>
           <Grid item xs={6} md={2}>
-            {(searchTerm || statusFilter) && (
+            {(statusFilter) && (
               <Button
                 fullWidth
                 variant="outlined"
@@ -419,20 +406,23 @@ const Savings = () => {
         )}
         
         <Box sx={{ height: 500 }}>
-          <DataGrid
+          <DataTable
             rows={savings.map(s => ({ ...s, id: s._id || `temp-${s.schemeNumber}` }))}
             columns={columns}
             loading={loading}
+            error={error}
+            getRowId={(row) => row.id || row._id}
+            height={500}
+            pagination={true}
             paginationMode="server"
             rowCount={totalSavings}
-            pageSizeOptions={[5, 10, 25]}
+            pageSizeOptions={[25, 50, 100]}
             paginationModel={paginationModel}
             onPaginationModelChange={setPaginationModel}
-            disableRowSelectionOnClick
-            getRowClassName={(params) => 
-              params.row.isRedeemed ? 'redeemed-row' : ''
-            }
-            density="compact"
+            disableSelectionOnClick
+            quickSearch={true}
+            quickSearchField="custom"
+            customSearchFunction={customSearchFunction}
             sx={{
               '& .MuiDataGrid-columnHeader': {
                 backgroundColor: 'primary.main',

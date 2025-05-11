@@ -16,6 +16,10 @@ import {
   IconButton,
   Button,
   Autocomplete,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   Inventory as InventoryIcon,
@@ -47,7 +51,6 @@ const ProductForm = ({ initialData = null, loading = false, onFormDataChange }) 
     netWeight: '',
     grossWeight: '',
     purity: '',
-    makingCharges: 0,
     description: '',
     stock: 0,
     isActive: true,
@@ -65,6 +68,9 @@ const ProductForm = ({ initialData = null, loading = false, onFormDataChange }) 
     Gold: [],
     Silver: []
   });
+  const [customTypeDialogOpen, setCustomTypeDialogOpen] = useState(false);
+  const [customTypeValue, setCustomTypeValue] = useState('');
+  const [customTypes, setCustomTypes] = useState([]);
 
   // Modified useEffect to prevent re-renders
   useEffect(() => {
@@ -78,7 +84,6 @@ const ProductForm = ({ initialData = null, loading = false, onFormDataChange }) 
         netWeight: initialData.netWeight || initialData.weight || '',
         grossWeight: initialData.grossWeight || initialData.weight || '',
         purity: initialData.purity || '',
-        makingCharges: initialData.makingCharges || 0,
         description: initialData.description || '',
         stock: initialData.stock || 0,
         isActive: initialData.isActive !== undefined ? initialData.isActive : true,
@@ -100,6 +105,7 @@ const ProductForm = ({ initialData = null, loading = false, onFormDataChange }) 
     // Fetch rates on component mount
     if (isFirstRender.current) {
       fetchRates();
+      fetchCustomTypes();
       isFirstRender.current = false;
     }
   }, [initialData, onFormDataChange]);
@@ -144,6 +150,21 @@ const ProductForm = ({ initialData = null, loading = false, onFormDataChange }) 
       console.error('Error fetching rates:', err);
     } finally {
       setLoadingRates(false);
+    }
+  };
+
+  // Fetch custom product types
+  const fetchCustomTypes = async () => {
+    try {
+      const response = await api.get('/product-types');
+      if (response.data.success) {
+        setCustomTypes(response.data.data.map(type => ({
+          value: type.value,
+          label: type.label
+        })));
+      }
+    } catch (err) {
+      console.error('Error fetching custom types:', err);
     }
   };
 
@@ -209,7 +230,7 @@ const ProductForm = ({ initialData = null, loading = false, onFormDataChange }) 
     
     // Handle special number fields
     let parsedValue = value;
-    if (['netWeight', 'grossWeight', 'makingCharges', 'stock', 'stonePrice'].includes(name) && value !== '') {
+    if (['netWeight', 'grossWeight', 'stock', 'stonePrice'].includes(name) && value !== '') {
       parsedValue = parseFloat(value);
     }
     
@@ -311,459 +332,523 @@ const ProductForm = ({ initialData = null, loading = false, onFormDataChange }) 
     }).format(price);
   };
 
-  return (
-    <Grid container spacing={3}>
-      {/* Basic Information */}
-      <Grid item xs={12}>
-        <Typography variant="subtitle1" gutterBottom>
-          Basic Information
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-      </Grid>
+  // Save custom type
+  const handleSaveCustomType = async () => {
+    if (!customTypeValue.trim()) return;
+    
+    try {
+      const capitalizedType = customTypeValue.trim().charAt(0).toUpperCase() + customTypeValue.trim().slice(1);
       
-      {/* Direct HUID input with helper button */}
-      <Grid item xs={12} sm={6}>
-        <Box sx={{ display: 'flex' }}>
+      const newType = {
+        value: capitalizedType,
+        label: capitalizedType
+      };
+      
+      const response = await api.post('/product-types', newType);
+      
+      if (response.data.success) {
+        // Add the new type to the list
+        setCustomTypes([...customTypes, newType]);
+        
+        // Set the form data to use the new type
+        const updatedFormData = {
+          ...formData,
+          type: capitalizedType
+        };
+        setFormData(updatedFormData);
+        
+        // Notify parent component
+        if (onFormDataChange) {
+          onFormDataChange(updatedFormData);
+        }
+        
+        // Close the dialog
+        setCustomTypeDialogOpen(false);
+        setCustomTypeValue('');
+        
+        toast.success('New product type added successfully');
+      }
+    } catch (err) {
+      toast.error('Failed to add new product type');
+      console.error('Error adding custom type:', err);
+    }
+  };
+
+  // Get all type options including custom types
+  const getAllTypeOptions = () => {
+    // Combine built-in types with custom types, avoiding duplicates
+    const builtInValues = typeOptions.map(option => option.value);
+    const filteredCustomTypes = customTypes.filter(type => !builtInValues.includes(type.value));
+    
+    return [...typeOptions, ...filteredCustomTypes];
+  };
+
+  return (
+    <>
+      <Grid container spacing={3}>
+        {/* Basic Information */}
+        <Grid item xs={12}>
+          <Typography variant="subtitle1" gutterBottom>
+            Basic Information
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+        </Grid>
+        
+        {/* Direct HUID input with helper button */}
+        <Grid item xs={12} sm={6}>
+          <Box sx={{ display: 'flex' }}>
+            <TextField
+              fullWidth
+              label="HUID Number (Optional)"
+              name="huidNumber"
+              value={formData.huidNumber || ''}
+              onChange={handleChange}
+              disabled={loading}
+              error={!!errors.huidNumber}
+              helperText={errors.huidNumber || 'Hallmark Unique ID Number (if available)'}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <AssignmentIcon />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ flexGrow: 1, mr: 1 }}
+            />
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => handleChange({
+                target: {
+                  name: 'huidNumber',
+                  value: formData.huidNumber ? '' : '1234567890'
+                }
+              })}
+              sx={{ height: 56, minWidth: 100 }}
+            >
+              {formData.huidNumber ? 'Clear' : 'Fill Sample'}
+            </Button>
+          </Box>
+        </Grid>
+        
+        <Grid item xs={12} sm={6}>
           <TextField
             fullWidth
-            label="HUID Number (Optional)"
-            name="huidNumber"
-            value={formData.huidNumber || ''}
+            required
+            label="Product Name"
+            name="name"
+            value={formData.name}
             onChange={handleChange}
             disabled={loading}
-            error={!!errors.huidNumber}
-            helperText={errors.huidNumber || 'Hallmark Unique ID Number (if available)'}
+            error={!!errors.name}
+            helperText={errors.name}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <AssignmentIcon />
+                  <InventoryIcon />
                 </InputAdornment>
               ),
             }}
-            sx={{ flexGrow: 1, mr: 1 }}
           />
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => handleChange({
-              target: {
-                name: 'huidNumber',
-                value: formData.huidNumber ? '' : '1234567890'
+        </Grid>
+        
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth required error={!!errors.category}>
+            <InputLabel id="category-label">Category</InputLabel>
+            <Select
+              labelId="category-label"
+              id="category"
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+              disabled={loading}
+              startAdornment={
+                <InputAdornment position="start">
+                  <CategoryIcon />
+                </InputAdornment>
               }
-            })}
-            sx={{ height: 56, minWidth: 100 }}
-          >
-            {formData.huidNumber ? 'Clear' : 'Fill Sample'}
-          </Button>
-        </Box>
-      </Grid>
-      
-      <Grid item xs={12} sm={6}>
-        <TextField
-          fullWidth
-          required
-          label="Product Name"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          disabled={loading}
-          error={!!errors.name}
-          helperText={errors.name}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <InventoryIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Grid>
-      
-      <Grid item xs={12} sm={6}>
-        <FormControl fullWidth required error={!!errors.category}>
-          <InputLabel id="category-label">Category</InputLabel>
-          <Select
-            labelId="category-label"
-            id="category"
-            name="category"
-            value={formData.category}
-            onChange={handleChange}
-            disabled={loading}
-            startAdornment={
-              <InputAdornment position="start">
-                <CategoryIcon />
-              </InputAdornment>
-            }
-          >
-            {categoryOptions.map(option => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </Select>
-          {errors.category && <FormHelperText>{errors.category}</FormHelperText>}
-        </FormControl>
-      </Grid>
-      
-      <Grid item xs={12} sm={6}>
-        <FormControl fullWidth required error={!!errors.type}>
-          <InputLabel id="type-label">Type</InputLabel>
-          <Select
-            labelId="type-label"
-            id="type"
-            name="type"
-            value={formData.type}
-            onChange={handleChange}
-            disabled={loading}
-            startAdornment={
-              <InputAdornment position="start">
-                <DiamondIcon />
-              </InputAdornment>
-            }
-          >
-            {typeOptions.map(option => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </Select>
-          {errors.type && <FormHelperText>{errors.type}</FormHelperText>}
-        </FormControl>
-      </Grid>
-      
-      {/* Weight Information */}
-      <Grid item xs={12}>
-        <Typography variant="subtitle1" gutterBottom>
-          Weight Information
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-      </Grid>
-      
-      <Grid item xs={12} sm={4}>
-        <TextField
-          fullWidth
-          required
-          label="Net Weight"
-          name="netWeight"
-          type="number"
-          value={formData.netWeight}
-          onChange={handleChange}
-          disabled={loading}
-          error={!!errors.netWeight}
-          helperText={errors.netWeight || 'Pure metal weight'}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <ScaleIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Grid>
-      
-      <Grid item xs={12} sm={4}>
-        <TextField
-          fullWidth
-          required
-          label="Gross Weight"
-          name="grossWeight"
-          type="number"
-          value={formData.grossWeight}
-          onChange={handleChange}
-          disabled={loading}
-          error={!!errors.grossWeight}
-          helperText={errors.grossWeight || 'Total product weight'}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <ScaleIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Grid>
-      
-      <Grid item xs={12} sm={4}>
-        <FormControl fullWidth>
-          <InputLabel id="weightType-label">Weight Unit</InputLabel>
-          <Select
-            labelId="weightType-label"
-            id="weightType"
-            name="weightType"
-            value={formData.weightType}
-            onChange={handleChange}
-            disabled={loading}
-            startAdornment={
-              <InputAdornment position="start">
-                <ScaleIcon />
-              </InputAdornment>
-            }
-          >
-            {weightTypeOptions.map(option => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Grid>
-      
-      {/* Purity and Price Information */}
-      <Grid item xs={12}>
-        <Typography variant="subtitle1" gutterBottom>
-          Purity and Price Information
-          <Tooltip title="Refresh metal rates">
-            <IconButton 
-              size="small" 
-              onClick={handleRefreshRates} 
-              disabled={loadingRates}
-              sx={{ ml: 1 }}
             >
-              <RefreshIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-      </Grid>
-      
-      {isPurityRequired && (
-        <>
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth required error={!!errors.purity}>
-              <Autocomplete
-                id="purity"
-                freeSolo
-                disableClearable
-                options={getPurityOptions()}
-                getOptionLabel={(option) => {
-                  // Handle both string values and option objects
-                  if (typeof option === 'string') return option;
-                  return option.label || option.value || '';
-                }}
-                value={formData.purity}
-                onChange={(event, newValue) => {
-                  // Handle both string values and option objects
-                  const value = typeof newValue === 'string' ? newValue : newValue?.value;
-                  handleChange({
-                    target: { name: 'purity', value }
-                  });
-                }}
-                inputValue={formData.purity || ''}
-                onInputChange={(event, newInputValue) => {
-                  if (event) {
-                    handleChange({
-                      target: { name: 'purity', value: newInputValue }
-                    });
-                  }
-                }}
-                disabled={loading}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Purity"
-                    name="purity"
-                    required
-                    error={!!errors.purity}
-                    helperText={errors.purity || "Select from list or type custom value"}
-                    InputProps={{
-                      ...params.InputProps,
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <LocalOfferIcon />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                )}
-                renderOption={(props, option) => (
-                  <li {...props}>
-                    {option.label || option.value}
-                  </li>
-                )}
-              />
-            </FormControl>
-          </Grid>
-          
-          <Grid item xs={12} sm={4}>
-            <TextField
-              fullWidth
-              label="Current Rate per Gram"
-              value={dailyRate ? formatPrice(dailyRate) : 'Select purity first'}
-              disabled
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <MoneyIcon />
-                  </InputAdornment>
-                ),
+              {categoryOptions.map(option => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+            {errors.category && <FormHelperText>{errors.category}</FormHelperText>}
+          </FormControl>
+        </Grid>
+        
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth required error={!!errors.type}>
+            <InputLabel id="type-label">Type</InputLabel>
+            <Select
+              labelId="type-label"
+              id="type"
+              name="type"
+              value={formData.type}
+              onChange={(e) => {
+                handleChange(e);
+                if (e.target.value === 'Other') {
+                  setCustomTypeDialogOpen(true);
+                }
               }}
-              helperText={dailyRate ? `Daily rate for ${formData.purity} as per rates section` : 'Rate will be shown once purity is selected'}
-            />
-          </Grid>
-          
-          <Grid item xs={12} sm={4}>
-            <TextField
-              fullWidth
-              label="Making Charges (%)"
-              name="makingCharges"
-              type="number"
-              value={formData.makingCharges}
-              onChange={handleChange}
               disabled={loading}
-              error={!!errors.makingCharges}
-              helperText={errors.makingCharges || 'Percentage applied to metal value (weight × rate)'}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <MoneyIcon />
-                  </InputAdornment>
-                ),
-                endAdornment: <InputAdornment position="end">%</InputAdornment>,
-              }}
-            />
-          </Grid>
-        </>
-      )}
-      
-      {/* Stock Information */}
-      <Grid item xs={12}>
-        <Typography variant="subtitle1" gutterBottom>
-          Stock Information
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-      </Grid>
-      
-      <Grid item xs={12} sm={6}>
-        <TextField
-          fullWidth
-          required
-          label="Stock Quantity"
-          name="stock"
-          type="number"
-          value={formData.stock}
-          onChange={handleChange}
-          disabled={loading}
-          error={!!errors.stock}
-          helperText={errors.stock}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <LayersIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Grid>
-      
-      {/* Stone/Beeds Information */}
-      <Grid item xs={12}>
-        <Typography variant="subtitle1" gutterBottom>
-          Stone/Beeds Information
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-      </Grid>
-      
-      <Grid item xs={12} sm={4}>
-        <FormControl fullWidth>
-          <InputLabel id="hasStone-label">Has Stone/Beeds?</InputLabel>
-          <Select
-            labelId="hasStone-label"
-            id="hasStone"
-            name="hasStone"
-            value={formData.hasStone}
-            onChange={(e) => handleChange({
-              target: {
-                name: 'hasStone',
-                value: e.target.value,
-                type: 'checkbox',
-                checked: e.target.value
+              startAdornment={
+                <InputAdornment position="start">
+                  <DiamondIcon />
+                </InputAdornment>
               }
-            })}
+            >
+              {getAllTypeOptions().map(option => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+            {errors.type && <FormHelperText>{errors.type}</FormHelperText>}
+          </FormControl>
+        </Grid>
+        
+        {/* Weight Information */}
+        <Grid item xs={12}>
+          <Typography variant="subtitle1" gutterBottom>
+            Weight Information
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+        </Grid>
+        
+        <Grid item xs={12} sm={4}>
+          <TextField
+            fullWidth
+            required
+            label="Net Weight"
+            name="netWeight"
+            type="number"
+            value={formData.netWeight}
+            onChange={handleChange}
             disabled={loading}
-            startAdornment={
-              <InputAdornment position="start">
-                <DiamondIcon />
-              </InputAdornment>
-            }
+            error={!!errors.netWeight}
+            helperText={errors.netWeight || 'Pure metal weight'}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <ScaleIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+        
+        <Grid item xs={12} sm={4}>
+          <TextField
+            fullWidth
+            required
+            label="Gross Weight"
+            name="grossWeight"
+            type="number"
+            value={formData.grossWeight}
+            onChange={handleChange}
+            disabled={loading}
+            error={!!errors.grossWeight}
+            helperText={errors.grossWeight || 'Total product weight'}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <ScaleIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+        
+        <Grid item xs={12} sm={4}>
+          <FormControl fullWidth>
+            <InputLabel id="weightType-label">Weight Unit</InputLabel>
+            <Select
+              labelId="weightType-label"
+              id="weightType"
+              name="weightType"
+              value={formData.weightType}
+              onChange={handleChange}
+              disabled={loading}
+              startAdornment={
+                <InputAdornment position="start">
+                  <ScaleIcon />
+                </InputAdornment>
+              }
+            >
+              {weightTypeOptions.map(option => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        
+        {/* Purity and Price Information */}
+        <Grid item xs={12}>
+          <Typography variant="subtitle1" gutterBottom>
+            Purity and Price Information
+            <Tooltip title="Refresh metal rates">
+              <IconButton 
+                size="small" 
+                onClick={handleRefreshRates} 
+                disabled={loadingRates}
+                sx={{ ml: 1 }}
+              >
+                <RefreshIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+        </Grid>
+        
+        {isPurityRequired && (
+          <>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth required error={!!errors.purity}>
+                <Autocomplete
+                  id="purity"
+                  freeSolo
+                  disableClearable
+                  options={getPurityOptions()}
+                  getOptionLabel={(option) => {
+                    // Handle both string values and option objects
+                    if (typeof option === 'string') return option;
+                    return option.label || option.value || '';
+                  }}
+                  value={formData.purity}
+                  onChange={(event, newValue) => {
+                    // Handle both string values and option objects
+                    const value = typeof newValue === 'string' ? newValue : newValue?.value;
+                    handleChange({
+                      target: { name: 'purity', value }
+                    });
+                  }}
+                  inputValue={formData.purity || ''}
+                  onInputChange={(event, newInputValue) => {
+                    if (event) {
+                      handleChange({
+                        target: { name: 'purity', value: newInputValue }
+                      });
+                    }
+                  }}
+                  disabled={loading}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Purity"
+                      name="purity"
+                      required
+                      error={!!errors.purity}
+                      helperText={errors.purity || "Select from list or type custom value"}
+                      InputProps={{
+                        ...params.InputProps,
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <LocalOfferIcon />
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  )}
+                  renderOption={(props, option) => (
+                    <li {...props}>
+                      {option.label || option.value}
+                    </li>
+                  )}
+                />
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                label="Current Rate per Gram"
+                value={dailyRate ? formatPrice(dailyRate) : 'Select purity first'}
+                disabled
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <MoneyIcon />
+                    </InputAdornment>
+                  ),
+                }}
+                helperText={dailyRate ? `Daily rate for ${formData.purity} as per rates section` : 'Rate will be shown once purity is selected'}
+              />
+            </Grid>
+          </>
+        )}
+        
+        {/* Stock Information */}
+        <Grid item xs={12}>
+          <Typography variant="subtitle1" gutterBottom>
+            Stock Information
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+        </Grid>
+        
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            required
+            label="Stock Quantity"
+            name="stock"
+            type="number"
+            value={formData.stock}
+            onChange={handleChange}
+            disabled={loading}
+            error={!!errors.stock}
+            helperText={errors.stock}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LayersIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+        
+        {/* Stone/Beeds Information */}
+        <Grid item xs={12}>
+          <Typography variant="subtitle1" gutterBottom>
+            Stone/Beeds Information
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+        </Grid>
+        
+        <Grid item xs={12} sm={4}>
+          <FormControl fullWidth>
+            <InputLabel id="hasStone-label">Has Stone/Beeds?</InputLabel>
+            <Select
+              labelId="hasStone-label"
+              id="hasStone"
+              name="hasStone"
+              value={formData.hasStone}
+              onChange={(e) => handleChange({
+                target: {
+                  name: 'hasStone',
+                  value: e.target.value,
+                  type: 'checkbox',
+                  checked: e.target.value
+                }
+              })}
+              disabled={loading}
+              startAdornment={
+                <InputAdornment position="start">
+                  <DiamondIcon />
+                </InputAdornment>
+              }
+            >
+              <MenuItem value={true}>Yes</MenuItem>
+              <MenuItem value={false}>No</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        
+        {formData.hasStone && (
+          <>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                label="Stone/Beeds Details"
+                name="stoneDetails"
+                value={formData.stoneDetails}
+                onChange={handleChange}
+                disabled={loading}
+                placeholder="Type, quality, size, etc."
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <DiamondIcon />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                label="Stone/Beeds Price"
+                name="stonePrice"
+                type="number"
+                value={formData.stonePrice}
+                onChange={handleChange}
+                disabled={loading}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <MoneyIcon />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+          </>
+        )}
+        
+        {/* Description */}
+        <Grid item xs={12}>
+          <Typography variant="subtitle1" gutterBottom>
+            Additional Information
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+        </Grid>
+        
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Description"
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            disabled={loading}
+            error={!!errors.description}
+            helperText={errors.description}
+            multiline
+            rows={3}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <DescriptionIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+      </Grid>
+      
+      {/* Custom Type Dialog */}
+      <Dialog open={customTypeDialogOpen} onClose={() => setCustomTypeDialogOpen(false)}>
+        <DialogTitle>Add Custom Product Type</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="New Type Name"
+            fullWidth
+            variant="outlined"
+            value={customTypeValue}
+            onChange={(e) => setCustomTypeValue(e.target.value)}
+            helperText="Enter a name for the new product type (e.g. Anklet, Nose Ring)"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCustomTypeDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleSaveCustomType} 
+            variant="contained" 
+            color="primary"
+            disabled={!customTypeValue.trim()}
           >
-            <MenuItem value={true}>Yes</MenuItem>
-            <MenuItem value={false}>No</MenuItem>
-          </Select>
-        </FormControl>
-      </Grid>
-      
-      {formData.hasStone && (
-        <>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              fullWidth
-              label="Stone/Beeds Details"
-              name="stoneDetails"
-              value={formData.stoneDetails}
-              onChange={handleChange}
-              disabled={loading}
-              placeholder="Type, quality, size, etc."
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <DiamondIcon />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Grid>
-          
-          <Grid item xs={12} sm={4}>
-            <TextField
-              fullWidth
-              label="Stone/Beeds Price"
-              name="stonePrice"
-              type="number"
-              value={formData.stonePrice}
-              onChange={handleChange}
-              disabled={loading}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <MoneyIcon />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Grid>
-        </>
-      )}
-      
-      {/* Description */}
-      <Grid item xs={12}>
-        <Typography variant="subtitle1" gutterBottom>
-          Additional Information
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-      </Grid>
-      
-      <Grid item xs={12}>
-        <TextField
-          fullWidth
-          label="Description"
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          disabled={loading}
-          error={!!errors.description}
-          helperText={errors.description}
-          multiline
-          rows={3}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <DescriptionIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Grid>
-    </Grid>
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 

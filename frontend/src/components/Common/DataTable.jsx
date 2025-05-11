@@ -1,25 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo, memo } from 'react';
 import PropTypes from 'prop-types';
 import {
   Box,
   Paper,
   Typography,
-  TextField,
-  InputAdornment,
   CircularProgress,
 } from '@mui/material';
 import {
   DataGrid,
-  GridToolbar,
   GridToolbarContainer,
   GridToolbarColumnsButton,
   GridToolbarFilterButton,
   GridToolbarExport,
   GridToolbarDensitySelector,
 } from '@mui/x-data-grid';
-import { Search as SearchIcon } from '@mui/icons-material';
 
-const CustomToolbar = ({ title, quickSearchValue, onQuickSearchChange, loading }) => {
+import SearchBox from './SearchBox';
+
+// Memoize the toolbar to prevent re-renders
+const CustomToolbar = memo(({ title, onQuickSearch, loading }) => {
   return (
     <GridToolbarContainer sx={{ px: 2, py: 1.5 }}>
       <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
@@ -28,27 +27,14 @@ const CustomToolbar = ({ title, quickSearchValue, onQuickSearchChange, loading }
             {title}
           </Typography>
         )}
-        {onQuickSearchChange && (
-          <TextField
-            variant="outlined"
-            size="small"
-            placeholder="Quick Search"
-            value={quickSearchValue}
-            onChange={(e) => onQuickSearchChange(e.target.value)}
-            sx={{ minWidth: 200 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
-                </InputAdornment>
-              ),
-              endAdornment: loading ? (
-                <InputAdornment position="end">
-                  <CircularProgress size={20} />
-                </InputAdornment>
-              ) : null,
-            }}
-          />
+        {onQuickSearch && (
+          <Box sx={{ minWidth: 300 }}>
+            <SearchBox
+              placeholder="Quick Search"
+              onSearch={onQuickSearch}
+              loading={loading}
+            />
+          </Box>
         )}
       </Box>
       <GridToolbarColumnsButton />
@@ -57,7 +43,9 @@ const CustomToolbar = ({ title, quickSearchValue, onQuickSearchChange, loading }
       <GridToolbarExport />
     </GridToolbarContainer>
   );
-};
+});
+
+CustomToolbar.displayName = 'CustomToolbar';
 
 const DataTable = ({
   title,
@@ -75,6 +63,7 @@ const DataTable = ({
   height = 'auto',
   quickSearch = true,
   quickSearchField = 'all',
+  customSearchFunction = null,
   customLoadingOverlay = null,
   customNoRowsOverlay = null,
   toolbarComponents = null,
@@ -88,41 +77,50 @@ const DataTable = ({
     page: 0,
   });
 
-  // Handle quick search
-  const filteredRows = quickSearch && quickSearchValue
-    ? rows.filter((row) => {
-        if (quickSearchField === 'all') {
-          // Search across all string and number fields
-          return Object.keys(row).some((key) => {
-            const value = row[key];
-            if (value === null || value === undefined) return false;
-            return String(value).toLowerCase().includes(quickSearchValue.toLowerCase());
-          });
-        } else {
-          // Search only the specified field
-          const value = row[quickSearchField];
+  // Handle search with a stable callback reference
+  const handleQuickSearch = useCallback((searchTerm) => {
+    setQuickSearchValue(searchTerm);
+  }, []);
+
+  // Memoize filtered rows for performance
+  const filteredRows = useMemo(() => {
+    if (!quickSearch || !quickSearchValue) return rows;
+    
+    // If a custom search function is provided, use it
+    if (customSearchFunction && typeof customSearchFunction === 'function') {
+      return rows.filter(row => customSearchFunction(row, quickSearchValue));
+    }
+    
+    // Otherwise use the default search logic
+    return rows.filter((row) => {
+      if (quickSearchField === 'all') {
+        // Search across all string and number fields
+        return Object.keys(row).some((key) => {
+          const value = row[key];
           if (value === null || value === undefined) return false;
           return String(value).toLowerCase().includes(quickSearchValue.toLowerCase());
-        }
-      })
-    : rows;
+        });
+      } else if (quickSearchField === 'custom') {
+        // This is for backward compatibility - should use customSearchFunction instead
+        return Object.keys(row).some((key) => {
+          const value = row[key];
+          if (value === null || value === undefined) return false;
+          return String(value).toLowerCase().includes(quickSearchValue.toLowerCase());
+        });
+      } else {
+        // Search only the specified field
+        const value = row[quickSearchField];
+        if (value === null || value === undefined) return false;
+        return String(value).toLowerCase().includes(quickSearchValue.toLowerCase());
+      }
+    });
+  }, [rows, quickSearch, quickSearchValue, quickSearchField, customSearchFunction]);
 
-  // Handle selection change
-  const handleSelectionChange = (newSelectionModel) => {
+  // Handle selection with a stable callback
+  const handleSelectionChange = useCallback((newSelectionModel) => {
     setSelectionModel(newSelectionModel);
     onSelectionChange(newSelectionModel);
-  };
-
-  // Custom toolbar with quick search
-  const CustomDataGridToolbar = (props) => (
-    <CustomToolbar
-      {...props}
-      title={title}
-      quickSearchValue={quickSearchValue}
-      onQuickSearchChange={quickSearch ? setQuickSearchValue : null}
-      loading={loading}
-    />
-  );
+  }, [onSelectionChange]);
 
   // Error state
   if (error) {
@@ -145,6 +143,15 @@ const DataTable = ({
       </Paper>
     );
   }
+  
+  // Create a stable toolbar component
+  const ToolbarComponent = useCallback(() => (
+    <CustomToolbar
+      title={title}
+      onQuickSearch={quickSearch ? handleQuickSearch : null}
+      loading={loading}
+    />
+  ), [title, quickSearch, handleQuickSearch, loading]);
 
   return (
     <Paper
@@ -168,7 +175,7 @@ const DataTable = ({
         onPaginationModelChange={setPaginationModel}
         pageSizeOptions={rowsPerPageOptions}
         slots={{
-          toolbar: CustomDataGridToolbar,
+          toolbar: ToolbarComponent,
           loadingOverlay: customLoadingOverlay || undefined,
           noRowsOverlay: customNoRowsOverlay || undefined,
           ...toolbarComponents,
@@ -195,8 +202,7 @@ const DataTable = ({
 
 CustomToolbar.propTypes = {
   title: PropTypes.string,
-  quickSearchValue: PropTypes.string,
-  onQuickSearchChange: PropTypes.func,
+  onQuickSearch: PropTypes.func,
   loading: PropTypes.bool,
 };
 
@@ -216,6 +222,7 @@ DataTable.propTypes = {
   height: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   quickSearch: PropTypes.bool,
   quickSearchField: PropTypes.string,
+  customSearchFunction: PropTypes.func,
   customLoadingOverlay: PropTypes.node,
   customNoRowsOverlay: PropTypes.node,
   toolbarComponents: PropTypes.object,

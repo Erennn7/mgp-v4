@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-const API_URL = 'https://jewelry-management-api.onrender.com/api';
+const API_URL = import.meta.env.MODE === "development" ? "http://localhost:5000/api" : "https://jewelry-management-api.onrender.com/api";
 
 // Create axios instance
 const api = axios.create({

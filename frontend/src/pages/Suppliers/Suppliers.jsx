@@ -27,7 +27,9 @@ import {
   DialogContent,
   DialogTitle,
   CircularProgress,
-  Chip
+  Chip,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import { 
   Save as SaveIcon, 
@@ -45,6 +47,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useReactToPrint } from 'react-to-print';
 import { format } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
+import DataTable from '../../components/Common/DataTable';
 
 const Suppliers = () => {
   const { showSnackbar } = useSnackbar();
@@ -55,8 +58,17 @@ const Suppliers = () => {
   const [loading, setLoading] = useState(false);
   const [openReceipt, setOpenReceipt] = useState(false);
   const receiptRef = React.useRef(null);
-  const [supplierPurchases, setSupplierPurchases] = useState([]);
   const [purchasesLoading, setPurchasesLoading] = useState(false);
+  const [supplierPurchases, setSupplierPurchases] = useState([]);
+  const [totalSuppliers, setTotalSuppliers] = useState(0);
+  const [paginationModel, setPaginationModel] = useState({
+    pageSize: 25,
+    page: 0,
+  });
+  const [searchParams, setSearchParams] = useState({
+    searchTerm: '',
+    filters: {}
+  });
 
   // Form state
   const [formData, setFormData] = useState({
@@ -89,11 +101,32 @@ const Suppliers = () => {
     fetchSupplierPurchases();
   }, []);
 
-  const fetchSupplierPurchases = async () => {
+  const fetchSupplierPurchases = async (params = {}) => {
     setPurchasesLoading(true);
     try {
-      const response = await api.get('/suppliers');
+      // Create query string from search params
+      let queryString = `page=${paginationModel.page + 1}&limit=${paginationModel.pageSize}`;
+      
+      // Add search term if present (search by purchase number or supplier name)
+      if (params.searchTerm) {
+        queryString += `&searchTerm=${encodeURIComponent(params.searchTerm)}`;
+      }
+      
+      // Add date filters if present
+      if (params.filters?.startDate) {
+        queryString += `&startDate=${encodeURIComponent(params.filters.startDate)}`;
+      }
+      if (params.filters?.endDate) {
+        queryString += `&endDate=${encodeURIComponent(params.filters.endDate)}`;
+      }
+      
+      const response = await api.get(`/suppliers?${queryString}`);
       setSupplierPurchases(response.data.data || []);
+      
+      // Set total count from pagination data
+      if (response.data.pagination) {
+        setTotalSuppliers(response.data.total || response.data.data.length);
+      }
     } catch (error) {
       console.error('Error fetching supplier purchases:', error);
       showSnackbar('Failed to load supplier purchases', 'error');
@@ -248,6 +281,119 @@ const Suppliers = () => {
       totalAmount: total || 0
     });
     setOpenReceipt(true);
+  };
+
+  // Add the custom search function for DataTable
+  const customSearchFunction = (purchase, searchTerm) => {
+    if (!searchTerm) return true;
+    searchTerm = searchTerm.toLowerCase();
+    
+    // Search in purchase number
+    if (purchase.purchaseNumber && purchase.purchaseNumber.toLowerCase().includes(searchTerm)) {
+      return true;
+    }
+    
+    // Search in supplier name
+    if (purchase.supplier && purchase.supplier.name && 
+        purchase.supplier.name.toLowerCase().includes(searchTerm)) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  // Add a function to render the suppliers list with DataTable
+  const renderSuppliersList = () => {
+    const columns = [
+      {
+        field: 'purchaseNumber',
+        headerName: 'Purchase #',
+        flex: 1,
+        renderCell: (params) => (
+          <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+            {params.value}
+          </Typography>
+        )
+      },
+      {
+        field: 'supplierName',
+        headerName: 'Supplier',
+        flex: 1.5,
+        valueGetter: (params) => params.row.supplier?.name || 'N/A'
+      },
+      {
+        field: 'purchaseDate',
+        headerName: 'Date',
+        flex: 1,
+        valueGetter: (params) => new Date(params.row.purchaseDate),
+        valueFormatter: (params) => format(new Date(params.value), 'dd/MM/yyyy')
+      },
+      {
+        field: 'totalAmount',
+        headerName: 'Amount',
+        flex: 1,
+        type: 'number',
+        valueFormatter: (params) => `₹${params.value.toLocaleString('en-IN')}`
+      },
+      {
+        field: 'paymentStatus',
+        headerName: 'Status',
+        flex: 1,
+        renderCell: (params) => {
+          let color = 'default';
+          if (params.value === 'Paid') color = 'success';
+          else if (params.value === 'Partial') color = 'warning';
+          else if (params.value === 'Pending') color = 'error';
+          
+          return <Chip label={params.value} color={color} size="small" />;
+        }
+      },
+      {
+        field: 'actions',
+        headerName: 'Actions',
+        flex: 1,
+        renderCell: (params) => (
+          <Box>
+            <Tooltip title="View Details">
+              <IconButton 
+                size="small" 
+                onClick={() => navigate(`/suppliers/${params.row._id}`)}
+                sx={{ mr: 1 }}
+              >
+                <ViewIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        )
+      }
+    ];
+
+    return (
+      <Box sx={{ mt: 3 }}>
+        <DataTable
+          title="Supplier Purchases"
+          rows={supplierPurchases}
+          columns={columns}
+          loading={purchasesLoading}
+          quickSearch={true}
+          customSearchFunction={customSearchFunction}
+          getRowId={(row) => row._id}
+          paginationMode="server"
+          rowCount={totalSuppliers}
+          paginationModel={paginationModel}
+          onPaginationModelChange={(model) => {
+            setPaginationModel(model);
+            fetchSupplierPurchases(searchParams);
+          }}
+          pageSizeOptions={[10, 25, 50, 100]}
+          onQuickSearchChange={(searchTerm) => {
+            const newSearchParams = { ...searchParams, searchTerm };
+            setSearchParams(newSearchParams);
+            fetchSupplierPurchases(newSearchParams);
+          }}
+        />
+      </Box>
+    );
   };
 
   return (
@@ -550,60 +696,9 @@ const Suppliers = () => {
               No supplier purchase records found. Create a new purchase to see it here.
             </Typography>
           ) : (
-            <TableContainer>
-              <Table>
-                <TableHead sx={{ bgcolor: 'primary.main', '& .MuiTableCell-root': { color: 'white' } }}>
-                  <TableRow>
-                    <TableCell>Purchase #</TableCell>
-                    <TableCell>Date</TableCell>
-                    <TableCell>Supplier</TableCell>
-                    <TableCell>Invoice #</TableCell>
-                    <TableCell>Items</TableCell>
-                    <TableCell align="right">Amount</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell align="center">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {supplierPurchases.map((purchase) => (
-                    <TableRow key={purchase._id}>
-                      <TableCell>{purchase.purchaseNumber}</TableCell>
-                      <TableCell>
-                        {format(new Date(purchase.purchaseDate), 'dd/MM/yyyy')}
-                      </TableCell>
-                      <TableCell>{purchase.supplier?.name}</TableCell>
-                      <TableCell>{purchase.invoiceNumber || 'N/A'}</TableCell>
-                      <TableCell>
-                        {purchase.items?.map((item, i) => (
-                          <div key={i}>
-                            {item.description} ({item.weight}g)
-                            {i < purchase.items.length - 1 && ', '}
-                          </div>
-                        ))}
-                      </TableCell>
-                      <TableCell align="right">₹{purchase.totalAmount?.toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Chip 
-                          size="small"
-                          label={purchase.paymentStatus} 
-                          color={purchase.paymentStatus === 'Paid' ? 'success' : 
-                                 purchase.paymentStatus === 'Partial' ? 'warning' : 'error'}
-                        />
-                      </TableCell>
-                      <TableCell align="center">
-                        <Button
-                          size="small"
-                          startIcon={<ViewIcon />}
-                          onClick={() => navigate(`/suppliers/${purchase._id}`)}
-                        >
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <>
+              {renderSuppliersList()}
+            </>
           )}
         </Paper>
       )}

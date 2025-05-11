@@ -26,6 +26,7 @@ import {
   AttachMoney as MoneyIcon,
   CardGiftcard as GiftIcon,
   Loyalty as LoyaltyIcon,
+  ShoppingCart as ShoppingCartIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 
@@ -74,6 +75,8 @@ const CustomerDetail = () => {
   const [openEditForm, setOpenEditForm] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [formSubmitting, setFormSubmitting] = useState(false);
+  const [purchases, setPurchases] = useState([]);
+  const [purchasesLoading, setPurchasesLoading] = useState(true);
 
   // Fetch customer data
   const fetchCustomer = async () => {
@@ -130,12 +133,26 @@ const CustomerDetail = () => {
     }
   };
 
+  // Fetch customer's purchases as a supplier
+  const fetchPurchases = async () => {
+    setPurchasesLoading(true);
+    try {
+      const response = await api.get(`/purchases/supplier/${id}`);
+      setPurchases(response.data.data);
+    } catch (err) {
+      console.error('Purchases fetch error:', err);
+    } finally {
+      setPurchasesLoading(false);
+    }
+  };
+
   // Fetch all customer-related data
   const fetchAllData = () => {
     fetchCustomer();
     fetchSales();
     fetchLoans();
     fetchSavings();
+    fetchPurchases();
   };
 
   useEffect(() => {
@@ -406,6 +423,63 @@ const CustomerDetail = () => {
     },
   ];
 
+  // Purchases columns for data table
+  const purchasesColumns = [
+    {
+      field: 'purchaseNumber',
+      headerName: 'Purchase #',
+      width: 150,
+    },
+    {
+      field: 'purchaseDate',
+      headerName: 'Date',
+      width: 120,
+      valueFormatter: (params) =>
+        params.value ? format(new Date(params.value), 'MM/dd/yyyy') : '-',
+    },
+    {
+      field: 'totalAmount',
+      headerName: 'Amount',
+      width: 120,
+      valueFormatter: (params) =>
+        params.value
+          ? new Intl.NumberFormat('en-IN', {
+              style: 'currency',
+              currency: 'INR',
+            }).format(params.value)
+          : '-',
+    },
+    {
+      field: 'paymentStatus',
+      headerName: 'Status',
+      width: 130,
+      renderCell: (params) => (
+        <StatusChip status={params.value} />
+      ),
+    },
+    {
+      field: 'items',
+      headerName: 'Items',
+      width: 100,
+      valueGetter: (params) => params.value ? params.value.length : 0,
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 100,
+      sortable: false,
+      renderCell: (params) => (
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => navigate(`/purchases/${params.row._id}`)}
+        >
+          View
+        </Button>
+      ),
+    },
+  ];
+
   // Loading state
   if (loading) {
     return (
@@ -609,6 +683,12 @@ const CustomerDetail = () => {
                   label={`Savings (${savings.length})`} 
                   id="customer-tab-2" 
                 />
+                <Tab 
+                  icon={<ShoppingCartIcon />} 
+                  iconPosition="start" 
+                  label={`Purchases (${purchases.length})`} 
+                  id="customer-tab-3" 
+                />
               </Tabs>
             </Box>
 
@@ -671,6 +751,27 @@ const CustomerDetail = () => {
                   onClick={() => navigate('/savings/new', { state: { customerId: id } })}
                 >
                   Create New Savings Scheme
+                </Button>
+              </Box>
+            </TabPanel>
+            
+            {/* Purchases Tab */}
+            <TabPanel value={tabValue} index={3}>
+              <DataTable
+                rows={purchases}
+                columns={purchasesColumns}
+                loading={purchasesLoading}
+                getRowId={(row) => row._id}
+                height={400}
+                quickSearch={false}
+              />
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                <Button 
+                  variant="contained" 
+                  color="primary"
+                  onClick={() => navigate('/purchases/new', { state: { supplierId: id } })}
+                >
+                  Create New Purchase
                 </Button>
               </Box>
             </TabPanel>

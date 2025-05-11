@@ -33,6 +33,7 @@ import { useReactToPrint } from 'react-to-print';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { toast } from 'react-toastify';
+import PrintPurchase from '../../components/Printing/PrintPurchase';
 
 const PurchaseDetail = () => {
   const { id } = useParams();
@@ -41,6 +42,9 @@ const PurchaseDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const receiptRef = React.useRef(null);
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [directPrint, setDirectPrint] = useState(false);
+  const [generatePdfOnly, setGeneratePdfOnly] = useState(false);
 
   useEffect(() => {
     const fetchPurchase = async () => {
@@ -60,10 +64,35 @@ const PurchaseDetail = () => {
     fetchPurchase();
   }, [id]);
 
+  // Legacy print using react-to-print
   const handlePrint = useReactToPrint({
     content: () => receiptRef.current,
     documentTitle: `Purchase_Receipt_${purchase?.purchaseNumber}`,
   });
+
+  // Handle printing with the new component
+  const handlePrintNew = () => {
+    setPrintDialogOpen(true);
+  };
+
+  // Handle direct printing without preview dialog
+  const handleDirectPrint = () => {
+    setDirectPrint(true);
+    setPrintDialogOpen(true);
+  };
+
+  // Handle PDF generation
+  const handleGeneratePdf = () => {
+    setGeneratePdfOnly(true);
+    setPrintDialogOpen(true);
+  };
+
+  // Handle closing the print dialog
+  const handleClosePrintDialog = () => {
+    setPrintDialogOpen(false);
+    setDirectPrint(false);
+    setGeneratePdfOnly(false);
+  };
 
   // Generate PDF for purchase
   const generatePDF = (shouldPrint = false) => {
@@ -132,7 +161,6 @@ const PurchaseDetail = () => {
       doc.text('Sr', 14, headerY);
       doc.text('Description', 25, headerY);
       doc.text('HUID', 90, headerY);
-      doc.text('HSN', 110, headerY);
       doc.text('PCS', 125, headerY);
       doc.text('Gross Weight', 140, headerY);
       doc.text('Net Weight', 170, headerY);
@@ -171,7 +199,6 @@ const PurchaseDetail = () => {
         const huid = formatValue(item.huid, 'NILL');
         const isGoldItem = category.includes('GOLD');
         const isPurity22K = item.purity === '22K';
-        const hsn = (isGoldItem && isPurity22K) ? '7113' : '';
         
         // Handle gross and net weights
         const grossWeight = parseFloat(formatValue(item.grossWeight || item.weight, 0));
@@ -202,7 +229,6 @@ const PurchaseDetail = () => {
         doc.text(`${index + 1}`, 14, currentY);
         doc.text(description, 25, currentY);
         doc.text(huid, 90, currentY);
-        doc.text(hsn, 110, currentY);
         doc.text(`${quantity}`, 125, currentY);
         doc.text(`${grossWeight.toFixed(3)} GRM`, 140, currentY);
         doc.text(`${netWeight.toFixed(3)} GRM`, 170, currentY);
@@ -411,7 +437,7 @@ const PurchaseDetail = () => {
             variant="outlined"
             color="primary"
             startIcon={<PrintIcon />}
-            onClick={handlePrint}
+            onClick={handlePrintNew}
           >
             Print Receipt
           </Button>
@@ -419,7 +445,7 @@ const PurchaseDetail = () => {
             variant="outlined"
             color="primary"
             startIcon={<PdfIcon />}
-            onClick={() => generatePDF()}
+            onClick={handleGeneratePdf}
           >
             Download PDF
           </Button>
@@ -427,7 +453,7 @@ const PurchaseDetail = () => {
             variant="contained"
             color="primary"
             startIcon={<PrintIcon />}
-            onClick={() => generatePDF(true)}
+            onClick={handleDirectPrint}
           >
             Print PDF
           </Button>
@@ -620,185 +646,14 @@ const PurchaseDetail = () => {
         )}
       </Grid>
       
-      {/* Hidden Receipt for Printing */}
-      <Box sx={{ display: 'none' }}>
-        <Box 
-          ref={receiptRef} 
-          sx={{ 
-            p: 4, 
-            bgcolor: 'white',
-            width: '210mm', // A4 width
-            minHeight: '297mm', // A4 height
-            '@media print': {
-              width: '100%',
-              height: 'auto',
-            }
-          }}
-        >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-            <Box>
-              <Typography variant="h5" gutterBottom>
-                Purchase Receipt
-              </Typography>
-              <Typography variant="body2">
-                Receipt #: {purchase.purchaseNumber}
-              </Typography>
-              <Typography variant="body2">
-                Date: {format(new Date(purchase.purchaseDate), 'dd/MM/yyyy')}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="h6">
-                MG Potdar Jewellers
-              </Typography>
-              <Typography variant="body2">
-                123 Main Street, Pune
-              </Typography>
-              <Typography variant="body2">
-                Phone: 1234567890
-              </Typography>
-              <Typography variant="body2">
-                Email: contact@mgpotdarjewellers.com
-              </Typography>
-            </Box>
-          </Box>
-          
-          <Divider sx={{ mb: 3 }} />
-          
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Customer Information
-            </Typography>
-            <Grid container spacing={1}>
-              <Grid item xs={3}>
-                <Typography variant="body2" fontWeight="bold">
-                  Name:
-                </Typography>
-              </Grid>
-              <Grid item xs={9}>
-                <Typography variant="body2">
-                  {purchase.vendor?.name || 'N/A'}
-                </Typography>
-              </Grid>
-              
-              {purchase.vendor?.contact && (
-                <>
-                  <Grid item xs={3}>
-                    <Typography variant="body2" fontWeight="bold">
-                      Contact:
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={9}>
-                    <Typography variant="body2">
-                      {purchase.vendor.contact}
-                    </Typography>
-                  </Grid>
-                </>
-              )}
-            </Grid>
-          </Box>
-          
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Purchase Details
-            </Typography>
-            
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                    <TableCell>Description</TableCell>
-                    <TableCell align="right">Weight</TableCell>
-                    <TableCell align="right">Rate</TableCell>
-                    <TableCell align="right">Quantity</TableCell>
-                    <TableCell align="right">Amount</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {purchase.items?.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        {item.description}
-                        <Typography variant="caption" display="block" color="text.secondary">
-                          {item.category} - {item.purity}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        {item.weight} {item.weightType}
-                      </TableCell>
-                      <TableCell align="right">
-                        ₹{item.ratePerUnit?.toLocaleString()}/{item.weightType}
-                      </TableCell>
-                      <TableCell align="right">
-                        {item.quantity}
-                      </TableCell>
-                      <TableCell align="right">
-                        ₹{item.totalAmount?.toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
-          
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
-            <Box sx={{ width: '250px' }}>
-              <Grid container spacing={1}>
-                <Grid item xs={6}>
-                  <Typography variant="body2" fontWeight="bold">
-                    Total Amount:
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" fontWeight="bold" align="right">
-                    ₹{purchase.totalAmount?.toLocaleString()}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2">
-                    Payment Status:
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" align="right">
-                    {purchase.paymentStatus}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2">
-                    Payment Method:
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" align="right">
-                    {purchase.paymentMethod}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Box>
-          </Box>
-          
-          {purchase.notes && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Notes:
-              </Typography>
-              <Typography variant="body2">
-                {purchase.notes}
-              </Typography>
-            </Box>
-          )}
-          
-          <Divider sx={{ mb: 3 }} />
-          
-          <Box>
-            <Typography variant="body2" align="center">
-              Thank you for your business!
-            </Typography>
-          </Box>
-        </Box>
-      </Box>
+      {/* Print Purchase Component */}
+      <PrintPurchase
+        open={printDialogOpen}
+        onClose={handleClosePrintDialog}
+        purchaseData={purchase}
+        directPrint={directPrint}
+        generatePdf={generatePdfOnly}
+      />
     </>
   );
 };
