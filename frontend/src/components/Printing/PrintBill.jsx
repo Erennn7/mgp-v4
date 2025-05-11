@@ -9,127 +9,139 @@ import html2canvas from 'html2canvas';
 const PrintBill = ({ open, onClose, billData, directPrint = false, generatePdf = false }) => {
   const printRef = useRef(null);
   const [billHtml, setBillHtml] = useState('');
+  
+  // Clear HTML state when the dialog closes or opens
+  useEffect(() => {
+    if (!open) {
+      setBillHtml('');
+    }
+  }, [open]);
 
   // Generate HTML content for direct printing and PDF
   useEffect(() => {
-    if ((directPrint || generatePdf) && billData) {
-      // Calculate values needed for the bill
-      let calculatedSubTotal = 0;
-      
-      if (billData.items) {
-        billData.items.forEach(item => {
-          const baseAmount = item.rate * item.weight;
-          const makingChargePercentage = 10;
-          const makingCharge = item.makingCharge || (baseAmount * makingChargePercentage / 100);
-          calculatedSubTotal += (baseAmount + makingCharge);
-        });
-      }
-      
-      const taxRate = billData?.taxRate || 3;
-      const calculatedTax = calculatedSubTotal * (taxRate / 100);
-      const calculatedGrandTotal = calculatedSubTotal + calculatedTax;
+    // Only proceed if dialog is open or we're doing direct actions
+    if (!((open || directPrint || generatePdf) && billData)) {
+      return;
+    }
+    
+    // Calculate values needed for the bill
+    let calculatedSubTotal = 0;
+    
+    if (billData.items) {
+      billData.items.forEach(item => {
+        const baseAmount = item.rate * item.weight;
+        const makingChargePercentage = 10;
+        const makingCharge = item.makingCharge || (baseAmount * makingChargePercentage / 100);
+        calculatedSubTotal += (baseAmount + makingCharge);
+      });
+    }
+    
+    const taxRate = billData?.taxRate || 3;
+    const calculatedTax = calculatedSubTotal * (taxRate / 100);
+    const calculatedGrandTotal = calculatedSubTotal + calculatedTax;
 
-      // Base HTML for both print and PDF
-      const baseHtml = `
-        <div class="content-area">
-          <!-- Bill Header -->
-          <div class="header-row">
-            <div>
-              <span class="bold">Bill No:</span> ${billData?.invoiceNumber || 'INV-XXXXXX'}
-            </div>
-            <div>
-              <span class="bold">Date:</span> ${billData?.date ? new Date(billData.date).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')}
-            </div>
+    // Base HTML for both print and PDF
+    const baseHtml = `
+      <div class="content-area">
+        <!-- Bill Header -->
+        <div class="header-row">
+          <div>
+            <span class="bold">Bill No:</span> ${billData?.invoiceNumber || 'INV-XXXXXX'}
           </div>
-          
-          <!-- Customer Info -->
-          <div class="customer-info">
-            <span class="bold">Customer:</span> ${billData?.customer?.name || 'Customer Name'}${billData?.customer?.phone ? `, Ph: ${billData.customer.phone}` : ''}
-          </div>
-          
-          <!-- Items Table -->
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 4%;">Sr.</th>
-                <th style="width: 22%;">Particulars</th>
-                <th style="width: 9%;">HUID</th>
-                <th style="width: 6%;">HSN</th>
-                <th style="width: 5%;">PCS</th>
-                <th style="width: 8%;">Gross Wt.</th>
-                <th style="width: 8%;">Net Wt.</th>
-                <th style="width: 10%;" class="text-right">Rate</th>
-                <th style="width: 10%;" class="text-right">Making</th>
-                <th style="width: 12%;" class="text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${billData?.items?.map((item, index) => {
-                const makingChargePercentage = 10;
-                const baseAmount = item.rate * item.weight;
-                const makingCharge = item.makingCharge || (baseAmount * makingChargePercentage / 100);
-                const totalAmount = baseAmount + makingCharge;
-                
-                return `<tr>
-                  <td class="text-center">${index + 1}</td>
-                  <td>${item.description || `${item.category || ''} ${item.purity || ''}`}</td>
-                  <td class="text-center">${item.huid || (item.product?.huidNumber) || '-'}</td>
-                  <td class="text-center">${(item.category?.toLowerCase().includes('gold') && item.purity === '22K') ? '7113' : ''}</td>
-                  <td class="text-center">${item.quantity || 1}</td>
-                  <td class="text-center">${item.grossWeight ? `${item.grossWeight}g` : '-'}</td>
-                  <td class="text-center">${item.weight ? `${item.weight}g` : '-'}</td>
-                  <td class="text-right">₹${item.rate?.toLocaleString() || '-'}</td>
-                  <td class="text-right">₹${makingCharge?.toLocaleString() || '-'}</td>
-                  <td class="text-right">₹${totalAmount.toLocaleString()}</td>
-                </tr>`;
-              }).join('') || ''}
-              
-              ${Array.from({ length: Math.max(0, 5 - (billData?.items?.length || 0)) }).map(() => 
-                `<tr>
-                  <td style="height: 18px;"></td>
-                  <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
-                </tr>`
-              ).join('')}
-            </tbody>
-          </table>
-          
-          <!-- Totals -->
-          <div class="totals-box">
-            <div class="totals-row">
-              <div>Sub Total:</div>
-              <div>₹${calculatedSubTotal.toLocaleString()}</div>
-            </div>
-            <div class="totals-row">
-              <div>CGST (${taxRate/2}%):</div>
-              <div>₹${(calculatedTax/2).toLocaleString()}</div>
-            </div>
-            <div class="totals-row">
-              <div>SGST (${taxRate/2}%):</div>
-              <div>₹${(calculatedTax/2).toLocaleString()}</div>
-            </div>
-            <div class="totals-row">
-              <div class="bold">Grand Total:</div>
-              <div class="bold">₹${calculatedGrandTotal.toLocaleString()}</div>
-            </div>
-          </div>
-          
-          <div class="amount-words">
-            Amount in words: ${billData?.amountInWords || ''}
-          </div>
-          
-          <div class="footer-info">
-            <div>Payment Mode: ${billData?.paymentMethod || 'Cash'}</div>
+          <div>
+            <span class="bold">Date:</span> ${billData?.date ? new Date(billData.date).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')}
           </div>
         </div>
         
-        <!-- GSTIN -->
-        <div class="gstin">
+        <!-- Customer Info -->
+        <div class="customer-info">
+          <span class="bold">Customer:</span> ${billData?.customer?.name || 'Customer Name'}${billData?.customer?.phone ? `, Ph: ${billData.customer.phone}` : ''}
+        </div>
+        
+        <!-- Items Table -->
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 4%;">Sr.</th>
+              <th style="width: 22%;">Particulars</th>
+              <th style="width: 9%;">HUID</th>
+              <th style="width: 6%;">HSN</th>
+              <th style="width: 5%;">PCS</th>
+              <th style="width: 8%;">Gross Wt.</th>
+              <th style="width: 8%;">Net Wt.</th>
+              <th style="width: 10%;" class="text-right">Rate</th>
+              <th style="width: 10%;" class="text-right">Making</th>
+              <th style="width: 12%;" class="text-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${billData?.items?.map((item, index) => {
+              const makingChargePercentage = 10;
+              const baseAmount = item.rate * item.weight;
+              const makingCharge = item.makingCharge || (baseAmount * makingChargePercentage / 100);
+              const totalAmount = baseAmount + makingCharge;
+              
+              return `<tr>
+                <td class="text-center">${index + 1}</td>
+                <td>${item.description || `${item.category || ''} ${item.purity || ''}`}</td>
+                <td class="text-center">${item.huid || (item.product?.huidNumber) || '-'}</td>
+                <td class="text-center">${(item.category?.toLowerCase().includes('gold') && item.purity === '22K') ? '7113' : ''}</td>
+                <td class="text-center">${item.quantity || 1}</td>
+                <td class="text-center">${item.grossWeight ? `${item.grossWeight}g` : '-'}</td>
+                <td class="text-center">${item.weight ? `${item.weight}g` : '-'}</td>
+                <td class="text-right">₹${item.rate?.toLocaleString() || '-'}</td>
+                <td class="text-right">₹${makingCharge?.toLocaleString() || '-'}</td>
+                <td class="text-right">₹${totalAmount.toLocaleString()}</td>
+              </tr>`;
+            }).join('') || ''}
+            
+            ${Array.from({ length: Math.max(0, 5 - (billData?.items?.length || 0)) }).map(() => 
+              `<tr>
+                <td style="height: 18px;"></td>
+                <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+              </tr>`
+            ).join('')}
+          </tbody>
+        </table>
+        
+        <!-- Totals -->
+        <div class="totals-box">
+          <div class="totals-row">
+            <div>Sub Total:</div>
+            <div>₹${calculatedSubTotal.toLocaleString()}</div>
+          </div>
+          <div class="totals-row">
+            <div>CGST (${taxRate/2}%):</div>
+            <div>₹${(calculatedTax/2).toLocaleString()}</div>
+          </div>
+          <div class="totals-row">
+            <div>SGST (${taxRate/2}%):</div>
+            <div>₹${(calculatedTax/2).toLocaleString()}</div>
+          </div>
+          <div class="totals-row">
+            <div class="bold">Grand Total:</div>
+            <div class="bold">₹${calculatedGrandTotal.toLocaleString()}</div>
+          </div>
+        </div>
+        
+        <div class="amount-words">
+          Amount in words: ${billData?.amountInWords || ''}
+        </div>
+        
+        <div class="footer-info">
+          <div>Payment Mode: ${billData?.paymentMethod || 'Cash'}</div>
+        </div>
+        
+        <div style="margin-top: 10px; text-align: center; width: 100%; font-weight: bold;">
           GSTIN: 27DGJPP9641E1ZZ
         </div>
-      `;
+      </div>
+    `;
 
-      // Generate HTML for direct printing (without pre-printed elements)
-      const printHtml = `
+    // Generate independent HTML for direct printing (without pre-printed elements)
+    let printHtml = null;
+    if (directPrint) {
+      printHtml = `
         <!DOCTYPE html>
         <html>
           <head>
@@ -225,15 +237,6 @@ const PrintBill = ({ open, onClose, billData, directPrint = false, generatePdf =
                 justify-content: space-between;
                 margin-top: 1em;
               }
-              .gstin {
-                position: absolute;
-                bottom: 10mm;
-                width: 100%;
-                text-align: center;
-                font-size: 10pt;
-                font-weight: bold;
-                color: #000;
-              }
             </style>
           </head>
           <body>
@@ -243,9 +246,12 @@ const PrintBill = ({ open, onClose, billData, directPrint = false, generatePdf =
           </body>
         </html>
       `;
+    }
 
-      // Generate HTML for PDF with pre-printed elements
-      const pdfHtml = `
+    // Generate independent HTML for PDF with pre-printed elements
+    let pdfHtml = null;
+    if (generatePdf) {
+      pdfHtml = `
         <!DOCTYPE html>
         <html>
           <head>
@@ -432,15 +438,6 @@ const PrintBill = ({ open, onClose, billData, directPrint = false, generatePdf =
                 justify-content: space-between;
                 margin-top: 1em;
               }
-              .gstin {
-                position: absolute;
-                bottom: 10mm;
-                width: 100%;
-                text-align: center;
-                font-size: 10pt;
-                font-weight: bold;
-                color: #000;
-              }
             </style>
           </head>
           <body>
@@ -478,6 +475,7 @@ const PrintBill = ({ open, onClose, billData, directPrint = false, generatePdf =
                 </div>
                 <div class="certified">
                   <p style="margin: 0; font-size: 9pt;">Certified that the particulars given above are true and correct</p>
+                  <p style="margin-top: 8px; font-size: 10pt; font-weight: bold;">GSTIN: 27DGJPP9641E1ZZ</p>
                 </div>
                 <div class="company-sign">
                   <p class="marathi">एम. जी. पोतदार कंपनी</p>
@@ -488,15 +486,35 @@ const PrintBill = ({ open, onClose, billData, directPrint = false, generatePdf =
           </body>
         </html>
       `;
-      
-      // Set the appropriate HTML based on the action
+    }
+    
+    // Set the appropriate HTML based on the action, using separate variables
+    if (directPrint) {
+      setBillHtml(printHtml);
+    } else if (generatePdf) {
+      setBillHtml(pdfHtml);
+    }
+  }, [billData, directPrint, generatePdf, open]);
+
+  // Handle direct print or PDF generation when component is ready, with proper state cleanup
+  useEffect(() => {
+    if (open && billHtml) {
       if (directPrint) {
-        setBillHtml(printHtml);
+        console.log("Direct printing initiated");
+        printDirectly();
       } else if (generatePdf) {
-        setBillHtml(pdfHtml);
+        console.log("Direct PDF generation initiated");
+        generatePDFDirectly();
       }
     }
-  }, [billData, directPrint, generatePdf]);
+    
+    // Always cleanup state after direct actions
+    return () => {
+      if (directPrint || generatePdf) {
+        setBillHtml('');
+      }
+    };
+  }, [open, directPrint, generatePdf, billHtml]);
 
   // Direct print using iframe
   const printDirectly = () => {
@@ -620,19 +638,6 @@ const PrintBill = ({ open, onClose, billData, directPrint = false, generatePdf =
       if (onClose) onClose();
     }
   };
-
-  // Handle direct print or PDF generation when component is ready
-  useEffect(() => {
-    if (open && billHtml) {
-      if (directPrint) {
-        console.log("Direct printing initiated");
-        printDirectly();
-      } else if (generatePdf) {
-        console.log("Direct PDF generation initiated");
-        generatePDFDirectly();
-      }
-    }
-  }, [open, directPrint, generatePdf, billHtml]);
 
   // Handle printing from dialog
   const handleDialogPrint = useReactToPrint({
