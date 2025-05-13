@@ -1,7 +1,12 @@
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-const API_URL = import.meta.env.MODE === "development" ? "http://localhost:5000/api" : "https://jewelry-management-api.onrender.com/api";
+// Determine API URL based on environment
+const API_URL = import.meta.env.MODE === "development" 
+  ? "http://localhost:5000/api" 
+  : "https://jewelry-management-api.onrender.com/api";
+
+console.log('API URL:', API_URL);
 
 // Create axios instance
 const api = axios.create({
@@ -46,8 +51,7 @@ api.interceptors.response.use(
         // Show error message
         toast.error('Your session has expired. Please log in again.');
         
-        // Redirect to login page (don't use navigate here to avoid dependencies)
-        // Instead, reload the page which will redirect to login due to auth check
+        // Redirect to login page
         setTimeout(() => {
           window.location.href = '/login';
         }, 1000);

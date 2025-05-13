@@ -550,15 +550,15 @@ const SaleDetail = () => {
                     
                     // Calculate making charges in rupees
                     const makingChargesPercent = item.isCustomItem
-                      ? (item.customProductDetails?.makingCharges || sale.makingChargesPercentage || 0)
+                      ? (item.customProductDetails?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0)
                       : (item.product?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0);
                       
                     const rate = item.rate || 0;
                     const metalValue = netWeight * rate;
-                    const makingCharges = (metalValue * makingChargesPercent / 100);
+                    const makingCharge = (metalValue * makingChargesPercent / 100);
                     
                     // Calculate the subtotal (metalValue + makingCharges) which will be displayed as the Amount
-                    const itemSubtotal = metalValue + makingCharges;
+                    const itemSubtotal = metalValue + makingCharge;
                     
                     return (
                       <TableRow key={index}>
@@ -579,7 +579,7 @@ const SaleDetail = () => {
                         <TableCell align="right">{`${grossWeight} ${weightType}`}</TableCell>
                         <TableCell align="right">{`${netWeight} ${weightType}`}</TableCell>
                         <TableCell align="right">{formatCurrency(rate)}</TableCell>
-                        <TableCell align="right">{formatCurrency(makingCharges)}</TableCell>
+                        <TableCell align="right">{formatCurrency(makingCharge)}</TableCell>
                         <TableCell align="right">{formatCurrency(itemSubtotal)}</TableCell>
                       </TableRow>
                     );
@@ -649,21 +649,37 @@ const SaleDetail = () => {
           invoiceNumber: sale.invoiceNumber,
           date: sale.createdAt,
           customer: sale.customer,
-          items: sale.items.map(item => ({
-            description: item.isCustomItem 
-              ? item.customProductDetails.name 
-              : item.product?.name,
-            category: item.isCustomItem 
-              ? item.customProductDetails.category 
-              : item.product?.category,
-            purity: item.isCustomItem 
-              ? item.customProductDetails.purity 
-              : item.product?.purity,
-            grossWeight: item.grossWeight || item.weight,
-            weight: item.netWeight || item.weight,
-            rate: item.rate,
-            total: item.subTotal
-          })),
+          items: sale.items.map(item => {
+            // Calculate making charges in rupees
+            const netWeight = item.isCustomItem
+              ? item.customProductDetails?.netWeight || 0
+              : item.product?.netWeight || item.weight || 0;
+            
+            const makingChargesPercent = item.isCustomItem
+              ? (item.customProductDetails?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0)
+              : (item.product?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0);
+            
+            const rate = item.rate || 0;
+            const metalValue = netWeight * rate;
+            const makingCharge = (metalValue * makingChargesPercent / 100);
+            
+            return {
+              description: item.isCustomItem 
+                ? item.customProductDetails.name 
+                : item.product?.name,
+              category: item.isCustomItem 
+                ? item.customProductDetails.category 
+                : item.product?.category,
+              purity: item.isCustomItem 
+                ? item.customProductDetails.purity 
+                : item.product?.purity,
+              grossWeight: item.grossWeight || item.weight,
+              weight: netWeight,
+              rate: rate,
+              makingCharge: makingCharge, // Include the calculated making charge
+              total: metalValue + makingCharge
+            };
+          }),
           subTotal: sale.subTotal,
           taxRate: sale.tax,
           tax: (sale.subTotal * sale.tax / 100),

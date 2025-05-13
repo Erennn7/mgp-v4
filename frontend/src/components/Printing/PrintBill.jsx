@@ -30,8 +30,7 @@ const PrintBill = ({ open, onClose, billData, directPrint = false, generatePdf =
     if (billData.items) {
       billData.items.forEach(item => {
         const baseAmount = item.rate * item.weight;
-        const makingChargePercentage = 10;
-        const makingCharge = item.makingCharge || (baseAmount * makingChargePercentage / 100);
+        const makingCharge = item.makingCharge || 0;
         calculatedSubTotal += (baseAmount + makingCharge);
       });
     }
@@ -76,9 +75,8 @@ const PrintBill = ({ open, onClose, billData, directPrint = false, generatePdf =
           </thead>
           <tbody>
             ${billData?.items?.map((item, index) => {
-              const makingChargePercentage = 10;
               const baseAmount = item.rate * item.weight;
-              const makingCharge = item.makingCharge || (baseAmount * makingChargePercentage / 100);
+              const makingCharge = item.makingCharge || 0;
               const totalAmount = baseAmount + makingCharge;
               
               return `<tr>

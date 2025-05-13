@@ -63,7 +63,7 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
     items: [],
     itemsTotal: 0,
     subTotal: 0,
-    makingChargesPercentage: 5, // Default to 5%
+    makingChargesPercentage: initialData?.makingChargesPercentage || 0, // Use initialData if available, otherwise default to 0%
     makingChargesAmount: 0,
     tax: 0,
     discount: 0,
@@ -131,7 +131,7 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
         items: initialData.items || [],
         itemsTotal: initialData.itemsTotal || 0,
         subTotal: initialData.subTotal || 0,
-        makingChargesPercentage: initialData.makingChargesPercentage || 0,
+        makingChargesPercentage: initialData.makingChargesPercentage ?? 5, // Use null coalescing to properly handle 0 value
         makingChargesAmount: initialData.makingChargesAmount || 0,
         tax: initialData.tax || 0,
         discount: initialData.discount || 0,
@@ -159,15 +159,20 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
     fetchLatestRates();
   }, []);
 
-  // Recalculate totals when items, tax, discount, or making charges percentage changes
+  // Recalculate totals when items, tax, discount changes
   useEffect(() => {
-    calculateTotals();
-  }, [formData.items, formData.tax, formData.discount, formData.makingChargesPercentage]);
+    // Use a timeout to ensure we don't get stuck in an infinite loop
+    const timeoutId = setTimeout(() => {
+      calculateTotals();
+    }, 50);
+
+    return () => clearTimeout(timeoutId); // Clean up on unmount or re-render
+  }, [formData.items, formData.tax, formData.discount]);
 
   // Calculate price when custom product details change
   useEffect(() => {
     calculateCustomProductPrice();
-  }, [customProduct.category, customProduct.purity, customProduct.netWeight, customProduct.hasStone, customProduct.stonePrice, latestRates]);
+  }, [customProduct.category, customProduct.purity, customProduct.netWeight, customProduct.hasStone, customProduct.stonePrice, latestRates, formData.makingChargesPercentage]);
 
   // Fetch latest rates
   const fetchLatestRates = async () => {
@@ -234,8 +239,9 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
       // Base metal value calculation
       const metalValue = customProduct.netWeight * ratePerGram;
       
-      // Calculate making charges using the global making charges percentage
-      const makingChargesAmount = (metalValue * formData.makingChargesPercentage) / 100;
+      // Use the makingChargesPercentage from form state, ensuring it's a valid number
+      const makingChargesPercentage = parseFloat(formData.makingChargesPercentage) || 0;
+      const makingChargesAmount = (metalValue * makingChargesPercentage) / 100;
       
       // Add stone price if product has stones
       const stonePrice = customProduct.hasStone && customProduct.stonePrice ? parseFloat(customProduct.stonePrice) : 0;
@@ -418,7 +424,7 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
       });
     }
     
-    // Recalculate totals when making charges percentage changes
+    // Manually trigger calculation for making charges changes
     if (name === 'makingChargesPercentage') {
       setTimeout(() => calculateTotals(), 10);
     }
@@ -595,6 +601,7 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
       total
     });
     
+    // Do not modify makingChargesPercentage - keep the user's value
     const updatedFormData = {
       ...formData,
       itemsTotal,
@@ -1272,25 +1279,51 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
               type="number"
               value={formData.makingChargesPercentage}
               onChange={(e) => {
-                // Get the new value directly
-                const newValue = parseFloat(e.target.value) || 0;
-                
-                // Update form data with new making charges percentage
-                const updatedFormData = {
-                  ...formData,
-                  makingChargesPercentage: newValue
-                };
-                
-                // Set the updated form data
-                setFormData(updatedFormData);
-                
-                // Notify parent component about data change
-                if (onFormDataChange) {
-                  onFormDataChange(updatedFormData);
-                }
-                
-                // Force recalculation of totals
-                setTimeout(() => calculateTotals(), 0);
+                // Get the value directly from the event
+                const newValue = parseFloat(e.target.value);
+                // Handle invalid input by defaulting to 0
+                const validValue = isNaN(newValue) ? 0 : Math.max(0, Math.min(100, newValue));
+
+                // Store the value directly
+                setFormData(prevData => {
+                  // Create the new data object
+                  const newData = {
+                    ...prevData,
+                    makingChargesPercentage: validValue
+                  };
+                  
+                  // Calculate making charges amount based on percentage
+                  const makingChargesAmount = (newData.itemsTotal * validValue) / 100;
+                  
+                  // Calculate subtotal (items total + making charges)
+                  const subTotal = newData.itemsTotal + makingChargesAmount;
+                  
+                  // Calculate GST amount based on percentage of subtotal
+                  const gstAmount = (subTotal * (newData.tax || 0)) / 100;
+                  
+                  // Use discount as absolute amount
+                  const discountAmount = parseFloat(newData.discount) || 0;
+                  
+                  // Calculate final total
+                  const total = Math.max(0, subTotal + gstAmount - discountAmount);
+                  
+                  // Update all the calculated values
+                  newData.makingChargesAmount = makingChargesAmount;
+                  newData.subTotal = subTotal;
+                  newData.total = total;
+                  
+                  // Update amount paid if payment status is Paid
+                  if (newData.paymentStatus === 'Paid') {
+                    newData.amountPaid = total;
+                  }
+                  
+                  // Notify parent component about data change
+                  if (onFormDataChange) {
+                    onFormDataChange(newData);
+                  }
+                  
+                  return newData;
+                });
               }}
               disabled={loading}
               InputProps={{
