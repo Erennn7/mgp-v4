@@ -88,9 +88,10 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
           }}>
             <TableHead>
               <TableRow>
-                <TableCell align="center" width="5%">Sr.</TableCell>
-                <TableCell width="25%" sx={{ whiteSpace: 'normal', wordWrap: 'break-word' }}>Particulars</TableCell>
-                <TableCell align="center" width="10%">HUID</TableCell>
+                <TableCell align="center" width="4%">Sr.</TableCell>
+                <TableCell width="22%">Particulars</TableCell>
+                <TableCell align="center" width="9%">HUID</TableCell>
+                <TableCell align="center" width="6%">HSN</TableCell>
                 <TableCell align="center" width="8%">Gross Wt.</TableCell>
                 <TableCell align="center" width="8%">Net Wt.</TableCell>
                 <TableCell align="right" width="12%">Rate</TableCell>
@@ -104,6 +105,23 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
                 const weight = item.weight ? parseFloat(item.weight) : 0;
                 const totalAmount = rate * weight;
                 
+                // HSN code logic
+                const getHSNCode = (item) => {
+                  const purity = (item.purity || '').toLowerCase().trim();
+                  
+                  // Check for 22K format
+                  if (purity === '22k' || purity === '22 k' || purity === '22 kt' || purity === '22kt') {
+                    return '7113';
+                  }
+                  
+                  // Check for percentage format (91.6%)
+                  if (purity === '91.6%' || purity === '91.6' || purity === '91.6 %') {
+                    return '7113';
+                  }
+                  
+                  return '-';
+                };
+                
                 return (
                   <TableRow key={index}>
                     <TableCell align="center">{index + 1}</TableCell>
@@ -113,8 +131,15 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
                     <TableCell align="center">
                       {item.huid || '-'}
                     </TableCell>
-                    <TableCell align="center">{item.grossWeight ? `${item.grossWeight}g` : '-'}</TableCell>
-                    <TableCell align="center">{item.weight ? `${item.weight}g` : '-'}</TableCell>
+                    <TableCell align="center">
+                      {getHSNCode(item)}
+                    </TableCell>
+                    <TableCell align="center">
+                      {item.grossWeight ? `${parseFloat(item.grossWeight).toFixed(3)}g` : '-'}
+                    </TableCell>
+                    <TableCell align="center">
+                      {item.netWeight ? `${parseFloat(item.netWeight).toFixed(3)}g` : '-'}
+                    </TableCell>
                     <TableCell align="right">{rate > 0 ? `₹${rate.toLocaleString()}` : '-'}</TableCell>
                     <TableCell align="right">{totalAmount > 0 ? `₹${totalAmount.toLocaleString()}` : '-'}</TableCell>
                   </TableRow>
@@ -125,6 +150,7 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
               {Array.from({ length: Math.max(0, 5 - (purchaseData?.items?.length || 0)) }).map((_, index) => (
                 <TableRow key={`empty-${index}`}>
                   <TableCell style={{ height: '18px' }}></TableCell>
+                  <TableCell></TableCell>
                   <TableCell></TableCell>
                   <TableCell></TableCell>
                   <TableCell></TableCell>
@@ -241,13 +267,14 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
         <table>
           <thead>
             <tr>
-              <th style="width: 5%;">Sr.</th>
-              <th style="width: 25%;">Particulars</th>
-              <th style="width: 10%;">HUID</th>
-              <th style="width: 10%;">Gross Wt.</th>
-              <th style="width: 10%;">Net Wt.</th>
-              <th style="width: 15%;" class="text-right">Rate</th>
-              <th style="width: 15%;" class="text-right">Amount</th>
+              <th style="width: 4%;">Sr.</th>
+              <th style="width: 22%;">Particulars</th>
+              <th style="width: 9%;">HUID</th>
+              <th style="width: 6%;">HSN</th>
+              <th style="width: 8%;">Gross Wt.</th>
+              <th style="width: 8%;">Net Wt.</th>
+              <th style="width: 12%;" class="text-right">Rate</th>
+              <th style="width: 12%;" class="text-right">Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -256,12 +283,30 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
               const weight = item.weight ? parseFloat(item.weight) : 0;
               const totalAmount = rate * weight;
               
+              // HSN code logic
+              const getHSNCode = (item) => {
+                const purity = (item.purity || '').toLowerCase().trim();
+                
+                // Check for 22K format
+                if (purity === '22k' || purity === '22 k' || purity === '22 kt' || purity === '22kt') {
+                  return '7113';
+                }
+                
+                // Check for percentage format (91.6%)
+                if (purity === '91.6%' || purity === '91.6' || purity === '91.6 %') {
+                  return '7113';
+                }
+                
+                return '-';
+              };
+              
               return `<tr>
                 <td class="text-center">${index + 1}</td>
                 <td>${item.description || `${item.category || ''} ${item.purity || ''}`}</td>
                 <td class="text-center">${item.huid || '-'}</td>
-                <td class="text-center">${item.grossWeight ? `${item.grossWeight}g` : '-'}</td>
-                <td class="text-center">${item.weight ? `${item.weight}g` : '-'}</td>
+                <td class="text-center">${getHSNCode(item)}</td>
+                <td class="text-center">${item.grossWeight ? `${parseFloat(item.grossWeight).toFixed(3)}g` : '-'}</td>
+                <td class="text-center">${item.netWeight ? `${parseFloat(item.netWeight).toFixed(3)}g` : '-'}</td>
                 <td class="text-right">${rate > 0 ? `₹${rate.toLocaleString()}` : '-'}</td>
                 <td class="text-right">${totalAmount > 0 ? `₹${totalAmount.toLocaleString()}` : '-'}</td>
               </tr>`;

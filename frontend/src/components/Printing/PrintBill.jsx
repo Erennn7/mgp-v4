@@ -35,7 +35,7 @@ const PrintBill = ({ open, onClose, billData, directPrint = false, generatePdf =
       });
     }
     
-    const taxRate = billData?.taxRate || 3;
+    const taxRate = billData?.taxRate || 0;
     const calculatedTax = calculatedSubTotal * (taxRate / 100);
     const calculatedGrandTotal = calculatedSubTotal + calculatedTax;
 
@@ -79,14 +79,35 @@ const PrintBill = ({ open, onClose, billData, directPrint = false, generatePdf =
               const makingCharge = item.makingCharge || 0;
               const totalAmount = baseAmount + makingCharge;
               
+              // Updated HSN code logic
+              const getHSNCode = (item) => {
+                const purity = (item.purity || '').toLowerCase().trim();
+                
+                // Check for 22K format
+                if (purity === '22k' || purity === '22 k' || purity === '22 kt' || purity === '22kt') {
+                  return '7113';
+                }
+                
+                // Check for percentage format (91.6%)
+                if (purity === '91.6%' || purity === '91.6' || purity === '91.6 %') {
+                  return '7113';
+                }
+                
+                return '-';
+              };
+              
+              // Use netWeight for net weight and grossWeight for gross weight
+              const grossWeightDisplay = item.grossWeight ? `${parseFloat(item.grossWeight).toFixed(3)}g` : '-';
+              const netWeightDisplay = item.netWeight ? `${parseFloat(item.netWeight).toFixed(3)}g` : '-';
+              
               return `<tr>
                 <td class="text-center">${index + 1}</td>
                 <td>${item.description || `${item.category || ''} ${item.purity || ''}`}</td>
                 <td class="text-center">${item.huid || (item.product?.huidNumber) || '-'}</td>
-                <td class="text-center">${(item.category?.toLowerCase().includes('gold') && item.purity === '22K') ? '7113' : ''}</td>
+                <td class="text-center">${getHSNCode(item)}</td>
                 <td class="text-center">${item.quantity || 1}</td>
-                <td class="text-center">${item.grossWeight ? `${item.grossWeight}g` : '-'}</td>
-                <td class="text-center">${item.weight ? `${item.weight}g` : '-'}</td>
+                <td class="text-center">${grossWeightDisplay}</td>
+                <td class="text-center">${netWeightDisplay}</td>
                 <td class="text-right">₹${item.rate?.toLocaleString() || '-'}</td>
                 <td class="text-right">₹${makingCharge?.toLocaleString() || '-'}</td>
                 <td class="text-right">₹${totalAmount.toLocaleString()}</td>
@@ -110,11 +131,11 @@ const PrintBill = ({ open, onClose, billData, directPrint = false, generatePdf =
           </div>
           <div class="totals-row">
             <div>CGST (${taxRate/2}%):</div>
-            <div>₹${(calculatedTax/2).toLocaleString()}</div>
+                <div>₹${taxRate === 0 ? '0' : (calculatedTax/2).toLocaleString()}</div>
           </div>
           <div class="totals-row">
             <div>SGST (${taxRate/2}%):</div>
-            <div>₹${(calculatedTax/2).toLocaleString()}</div>
+            <div>₹${taxRate === 0 ? '0' : (calculatedTax/2).toLocaleString()}</div>
           </div>
           <div class="totals-row">
             <div class="bold">Grand Total:</div>
@@ -773,4 +794,4 @@ const PrintBill = ({ open, onClose, billData, directPrint = false, generatePdf =
   );
 };
 
-export default PrintBill; 
+export default PrintBill;

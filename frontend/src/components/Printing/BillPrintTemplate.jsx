@@ -1,5 +1,4 @@
 import React from 'react';
-import { Box, Typography, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 import { format } from 'date-fns';
 
 // Function to convert number to words
@@ -61,155 +60,118 @@ const convertToWords = (amount) => {
 };
 
 const BillPrintTemplate = ({ billData }) => {
-  // Bill dimensions in mm
-  // Total height: 158.75mm (6.25 inches)
-  // Total width: 209.55mm (8.25 inches)
-  // Top preprinted area: 39mm (3.9cm)
-  // Content area height: 100mm (10cm)
-  // Bottom preprinted area: ~19.75mm
+  // Updated getHSNCode function
+  const getHSNCode = (item) => {
+    // Normalize the purity string for comparison
+    const normalizedPurity = (item.purity || '').toLowerCase().trim();
+    
+    // Check for 22K format
+    if (normalizedPurity === '22k' || normalizedPurity === '22 k' || normalizedPurity === '22 kt' || normalizedPurity === '22kt') {
+      return '7113';
+    }
+    
+    // Check for percentage format (91.6%)
+    if (normalizedPurity === '91.6%' || normalizedPurity === '91.6' || normalizedPurity === '91.6 %') {
+      return '7113';
+    }
+    
+    return '-';
+  };
 
   return (
-    <Box 
-      sx={{
-        width: '209.55mm',
-        height: '158.75mm',
-        position: 'relative',
-        backgroundColor: '#fff',
-        color: '#000',
-        "@media print": {
-          padding: 0,
-          margin: 0
-        }
-      }}
-    >
+    <div className="relative w-[209.55mm] h-[158.75mm] bg-white text-black">
       {/* Content Area (starts after 39mm from top) */}
-      <Box 
-        sx={{
-          position: 'absolute',
-          top: '39mm',
-          width: '100%',
-          height: '100mm',
-          padding: '3mm 5mm',
-          boxSizing: 'border-box',
-          fontFamily: 'Arial, sans-serif',
-          fontSize: '10pt',
-          backgroundColor: 'white',
-          color: '#000'
-        }}
-      >
+      <div className="absolute top-[39mm] w-full h-[100mm] p-[3mm] box-border font-sans text-[10pt]">
         {/* Bill Header - Invoice Number and Date */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
-          <Box>
-            <Typography variant="body2" component="span" sx={{ fontSize: '10pt', fontWeight: 'bold', color: '#000' }}>
-              Bill No:
-            </Typography>{' '}
-            <Typography variant="body2" component="span" sx={{ fontSize: '10pt', color: '#000' }}>
-              {billData?.invoiceNumber || 'INV-XXXXXX'}
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="body2" component="span" sx={{ fontSize: '10pt', fontWeight: 'bold', color: '#000' }}>
-              Date:
-            </Typography>{' '}
-            <Typography variant="body2" component="span" sx={{ fontSize: '10pt', color: '#000' }}>
+        <div className="flex justify-between mb-4">
+          <div>
+            <span className="font-bold text-[10pt]">Bill No:</span>{' '}
+            <span className="text-[10pt]">{billData?.invoiceNumber || 'INV-XXXXXX'}</span>
+          </div>
+          <div>
+            <span className="font-bold text-[10pt]">Date:</span>{' '}
+            <span className="text-[10pt]">
               {billData?.date ? format(new Date(billData.date), 'dd/MM/yyyy') : format(new Date(), 'dd/MM/yyyy')}
-            </Typography>
-          </Box>
-        </Box>
+            </span>
+          </div>
+        </div>
 
         {/* Customer Information */}
-        <Box sx={{ mb: 1.5 }}>
-          <Typography variant="body2" component="span" sx={{ fontSize: '10pt', fontWeight: 'bold', color: '#000' }}>
-            Customer:
-          </Typography>{' '}
-          <Typography variant="body2" component="span" sx={{ fontSize: '10pt', color: '#000' }}>
+        <div className="mb-4">
+          <span className="font-bold text-[10pt]">Customer:</span>{' '}
+          <span className="text-[10pt]">
             {billData?.customer?.name || 'Customer Name'},
             {billData?.customer?.phone ? ` Ph: ${billData.customer.phone}` : ''}
-          </Typography>
-        </Box>
+          </span>
+        </div>
 
-        {/* Items Table - Compact styling for proper fit */}
-        <TableContainer component={Paper} sx={{ mb: 1.5, boxShadow: 'none', border: 'none', backgroundColor: 'white' }}>
-          <Table size="small" sx={{ 
-            backgroundColor: 'white',
-            '& .MuiTableCell-root': { 
-              padding: '2px 4px',
-              fontSize: '9pt',
-              border: '1px solid #ddd',
-              backgroundColor: 'white',
-              color: '#000',
-              height: 'auto'
-            },
-            '& .MuiTableCell-head': {
-              fontWeight: 'bold',
-              backgroundColor: 'white',
-              color: '#000',
-              verticalAlign: 'middle'
-            }
-          }}>
-            <TableHead>
-              <TableRow>
-                <TableCell align="center" width="4%">Sr.</TableCell>
-                <TableCell width="22%" sx={{ whiteSpace: 'normal', wordWrap: 'break-word' }}>Particulars</TableCell>
-                <TableCell align="center" width="9%">HUID</TableCell>
-                <TableCell align="center" width="6%">HSN</TableCell>
-                <TableCell align="center" width="5%">PCS</TableCell>
-                <TableCell align="center" width="8%">Gross Wt.</TableCell>
-                <TableCell align="center" width="8%">Net Wt.</TableCell>
-                <TableCell align="right" width="10%">Rate</TableCell>
-                <TableCell align="right" width="10%">Making</TableCell>
-                <TableCell align="right" width="12%">Amount</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+        {/* Items Table */}
+        <div className="mb-4 bg-white">
+          <table className="w-full border-collapse bg-white text-[9pt]">
+            <thead>
+              <tr>
+                <th className="border border-gray-300 p-1 text-center w-[4%] font-bold bg-white">Sr.</th>
+                <th className="border border-gray-300 p-1 w-[22%] font-bold bg-white">Particulars</th>
+                <th className="border border-gray-300 p-1 text-center w-[9%] font-bold bg-white">HUID</th>
+                <th className="border border-gray-300 p-1 text-center w-[6%] font-bold bg-white">HSN</th>
+                <th className="border border-gray-300 p-1 text-center w-[5%] font-bold bg-white">PCS</th>
+                <th className="border border-gray-300 p-1 text-center w-[8%] font-bold bg-white">Gross Wt.</th>
+                <th className="border border-gray-300 p-1 text-center w-[8%] font-bold bg-white">Net Wt.</th>
+                <th className="border border-gray-300 p-1 text-right w-[10%] font-bold bg-white">Rate</th>
+                <th className="border border-gray-300 p-1 text-right w-[10%] font-bold bg-white">Making</th>
+                <th className="border border-gray-300 p-1 text-right w-[12%] font-bold bg-white">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
               {billData?.items?.map((item, index) => {
-                // Calculate making charge (assuming 10% if not provided)
-                const makingChargePercentage = 10;
                 const baseAmount = item.rate * item.weight;
-                const makingCharge = item.makingCharge || (baseAmount * makingChargePercentage / 100);
-                // Calculate total amount (baseAmount + makingCharge)
+                const makingCharge = item.makingCharge || 0;
                 const totalAmount = baseAmount + makingCharge;
                 
                 return (
-                  <TableRow key={index}>
-                    <TableCell align="center">{index + 1}</TableCell>
-                    <TableCell sx={{ whiteSpace: 'normal', wordWrap: 'break-word' }}>
+                  <tr key={index}>
+                    <td className="border border-gray-300 p-1 text-center">{index + 1}</td>
+                    <td className="border border-gray-300 p-1 break-words">
                       {item.description || `${item.category || ''} ${item.purity || ''}`}
-                    </TableCell>
-                    <TableCell align="center">
+                    </td>
+                    <td className="border border-gray-300 p-1 text-center">
                       {item.huid || (item.product?.huidNumber) || '-'}
-                    </TableCell>
-                    <TableCell align="center">
-                      {(item.category?.toLowerCase().includes('gold') && item.purity === '22K') ? '7113' : ''}
-                    </TableCell>
-                    <TableCell align="center">{item.quantity || 1}</TableCell>
-                    <TableCell align="center">{item.grossWeight ? `${item.grossWeight}g` : '-'}</TableCell>
-                    <TableCell align="center">{item.weight ? `${item.weight}g` : '-'}</TableCell>
-                    <TableCell align="right">₹{item.rate?.toLocaleString() || '-'}</TableCell>
-                    <TableCell align="right">₹{makingCharge?.toLocaleString() || '-'}</TableCell>
-                    <TableCell align="right">₹{totalAmount.toLocaleString()}</TableCell>
-                  </TableRow>
+                    </td>
+                    <td className="border border-gray-300 p-1 text-center">
+                      {getHSNCode(item)}
+                    </td>
+                    <td className="border border-gray-300 p-1 text-center">{item.quantity || 1}</td>
+                    <td className="border border-gray-300 p-1 text-center">
+                      {item.grossWeight ? `${parseFloat(item.grossWeight).toFixed(3)}g` : '-'}
+                    </td>
+                    <td className="border border-gray-300 p-1 text-center">
+                      {item.netWeight ? `${parseFloat(item.netWeight).toFixed(3)}g` : '-'}
+                    </td>
+                    <td className="border border-gray-300 p-1 text-right">₹{item.rate?.toLocaleString() || '-'}</td>
+                    <td className="border border-gray-300 p-1 text-right">₹{makingCharge?.toLocaleString() || '-'}</td>
+                    <td className="border border-gray-300 p-1 text-right">₹{totalAmount.toLocaleString()}</td>
+                  </tr>
                 );
               })}
               
               {/* Add empty rows to maintain table size */}
               {Array.from({ length: Math.max(0, 5 - (billData?.items?.length || 0)) }).map((_, index) => (
-                <TableRow key={`empty-${index}`}>
-                  <TableCell style={{ height: '18px' }}></TableCell>
-                  <TableCell></TableCell>
-                  <TableCell></TableCell>
-                  <TableCell></TableCell>
-                  <TableCell></TableCell>
-                  <TableCell></TableCell>
-                  <TableCell></TableCell>
-                  <TableCell></TableCell>
-                  <TableCell></TableCell>
-                  <TableCell></TableCell>
-                </TableRow>
+                <tr key={`empty-${index}`}>
+                  <td className="border border-gray-300 h-4"></td>
+                  <td className="border border-gray-300"></td>
+                  <td className="border border-gray-300"></td>
+                  <td className="border border-gray-300"></td>
+                  <td className="border border-gray-300"></td>
+                  <td className="border border-gray-300"></td>
+                  <td className="border border-gray-300"></td>
+                  <td className="border border-gray-300"></td>
+                  <td className="border border-gray-300"></td>
+                  <td className="border border-gray-300"></td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+            </tbody>
+          </table>
+        </div>
 
         {/* Calculate total values */}
         {(() => {
@@ -233,63 +195,51 @@ const BillPrintTemplate = ({ billData }) => {
           return (
             <>
               {/* Total Calculation */}
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                <Box sx={{ width: '40%', border: '1px solid #ddd', backgroundColor: 'white' }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, py: 0.5, borderBottom: '1px solid #ddd', backgroundColor: 'white' }}>
-                    <Typography variant="body2" sx={{ fontSize: '9pt', color: '#000' }}>Sub Total:</Typography>
-                    <Typography variant="body2" sx={{ fontSize: '9pt', color: '#000' }}>₹{calculatedSubTotal.toLocaleString()}</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, py: 0.5, borderBottom: '1px solid #ddd', backgroundColor: 'white' }}>
-                    <Typography variant="body2" sx={{ fontSize: '9pt', color: '#000' }}>CGST ({taxRate/2}%):</Typography>
-                    <Typography variant="body2" sx={{ fontSize: '9pt', color: '#000' }}>₹{(calculatedTax/2).toLocaleString()}</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, py: 0.5, borderBottom: '1px solid #ddd', backgroundColor: 'white' }}>
-                    <Typography variant="body2" sx={{ fontSize: '9pt', color: '#000' }}>SGST ({taxRate/2}%):</Typography>
-                    <Typography variant="body2" sx={{ fontSize: '9pt', color: '#000' }}>₹{(calculatedTax/2).toLocaleString()}</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, py: 0.5, backgroundColor: 'white' }}>
-                    <Typography variant="body2" sx={{ fontSize: '9pt', fontWeight: 'bold', color: '#000' }}>Grand Total:</Typography>
-                    <Typography variant="body2" sx={{ fontSize: '9pt', fontWeight: 'bold', color: '#000' }}>₹{calculatedGrandTotal.toLocaleString()}</Typography>
-                  </Box>
-                </Box>
-              </Box>
+              <div className="flex justify-end mb-4">
+                <div className="w-2/5 border border-gray-300 bg-white">
+                  <div className="flex justify-between px-4 py-1 border-b border-gray-300 bg-white">
+                    <span className="text-[9pt]">Sub Total:</span>
+                    <span className="text-[9pt]">₹{calculatedSubTotal.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between px-4 py-1 border-b border-gray-300 bg-white">
+                    <span className="text-[9pt]">CGST ({taxRate/2}%):</span>
+                    <span className="text-[9pt]">₹{(calculatedTax/2).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between px-4 py-1 border-b border-gray-300 bg-white">
+                    <span className="text-[9pt]">SGST ({taxRate/2}%):</span>
+                    <span className="text-[9pt]">₹{(calculatedTax/2).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between px-4 py-1 bg-white">
+                    <span className="text-[9pt] font-bold">Grand Total:</span>
+                    <span className="text-[9pt] font-bold">₹{calculatedGrandTotal.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
 
               {/* Additional Information */}
-              <Box sx={{ fontSize: '9pt', mt: 1 }}>
-                <Typography variant="body2" sx={{ fontSize: '9pt', fontStyle: 'italic', color: '#000' }}>
+              <div className="text-[9pt] mt-4">
+                <p className="text-[9pt] italic">
                   Amount in words: {billData?.amountInWords || convertToWords(calculatedGrandTotal)}
-                </Typography>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-                  <Typography variant="body2" sx={{ fontSize: '9pt', color: '#000' }}>
+                </p>
+                <div className="flex justify-between mt-4">
+                  <p className="text-[9pt]">
                     Payment Mode: {billData?.paymentMethod || 'Cash'}
-                  </Typography>
-                </Box>
-              </Box>
+                  </p>
+                </div>
+              </div>
             </>
           );
         })()}
-      </Box>
+      </div>
       
       {/* GSTIN in bottom strip */}
-      <Box 
-        sx={{
-          position: 'absolute',
-          bottom: '10mm',
-          width: '100%',
-          textAlign: 'center',
-          fontSize: '10pt',
-          fontWeight: 'bold',
-          color: '#000'
-        }}
-      >
-        <Typography variant="body2" sx={{ fontSize: '10pt', color: '#000' }}>
+      <div className="absolute bottom-[10mm] w-full text-center text-[10pt] font-bold">
+        <p className="text-[10pt]">
           GSTIN: 27DGJPP9641E1ZZ
-        </Typography>
-      </Box>
-    </Box>
+        </p>
+      </div>
+    </div>
   );
 };
 
-export default BillPrintTemplate; 
- 
- 
+export default BillPrintTemplate;
