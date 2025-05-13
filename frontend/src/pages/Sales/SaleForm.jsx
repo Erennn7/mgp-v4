@@ -526,7 +526,8 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
         rate: currentProduct.ratePerGram, // Use rate per gram from rates section
         weight: currentProduct.netWeight || 0,
         makingCharges: makingChargesPercent, // Store the making charges percentage
-        total: itemTotal
+        total: itemTotal,
+        purity: currentProduct.purity || '-' // Store purity directly for use in sale details
       });
     }
     

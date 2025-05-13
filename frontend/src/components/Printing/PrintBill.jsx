@@ -38,6 +38,7 @@ const PrintBill = ({ open, onClose, billData, directPrint = false, generatePdf =
     const taxRate = billData?.taxRate || 0;
     const calculatedTax = calculatedSubTotal * (taxRate / 100);
     const calculatedGrandTotal = calculatedSubTotal + calculatedTax;
+console.log(billData);
 
     // Base HTML for both print and PDF
     const baseHtml = `
@@ -81,7 +82,11 @@ const PrintBill = ({ open, onClose, billData, directPrint = false, generatePdf =
               
               // Updated HSN code logic
               const getHSNCode = (item) => {
+                console.log(item);
+                
+                
                 const purity = (item.purity || '').toLowerCase().trim();
+                
                 
                 // Check for 22K format
                 if (purity === '22k' || purity === '22 k' || purity === '22 kt' || purity === '22kt') {
