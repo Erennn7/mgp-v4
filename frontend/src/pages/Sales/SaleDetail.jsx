@@ -507,6 +507,7 @@ const SaleDetail = () => {
                   <TableRow>
                     <TableCell>Sr</TableCell>
                     <TableCell>Description</TableCell>
+                    <TableCell>Purity</TableCell>
                     <TableCell>HUID</TableCell>
                     <TableCell>HSN</TableCell>
                     <TableCell align="right">PCS</TableCell>
@@ -519,22 +520,6 @@ const SaleDetail = () => {
                 </TableHead>
                 <TableBody>
                   {sale.items.map((item, index) => {
-                    // Determine if item is 22K gold for HSN code
-                    const isPurity22K = item.isCustomItem 
-                      ? item.customProductDetails?.purity === '22K'
-                      : item.product?.purity === '22K';
-                      
-                    const isGoldItem = item.isCustomItem
-                      ? (item.customProductDetails?.category || '').includes('Gold')
-                      : (item.product?.category || '').includes('Gold');
-                      
-                    const hsnCode = (isPurity22K && isGoldItem) ? '7113' : '';
-                    
-                    // Get HUID if available
-                    const huid = item.isCustomItem 
-                      ? (item.customProductDetails?.huid || '-')
-                      : (item.product?.huidNumber || '-');
-                    
                     // Get weights
                     const grossWeight = item.isCustomItem
                       ? item.customProductDetails?.grossWeight || item.customProductDetails?.netWeight || 0
@@ -560,6 +545,23 @@ const SaleDetail = () => {
                     // Calculate the subtotal (metalValue + makingCharges) which will be displayed as the Amount
                     const itemSubtotal = metalValue + makingCharge;
                     
+                    const purity = item.isCustomItem
+                      ? item.customProductDetails?.purity || item._displayProduct?.purity || '-'
+                      : item.product?.purity || item.purity || '-';
+                    const category = item.isCustomItem
+                      ? item.customProductDetails?.category || ''
+                      : item.product?.category || '';
+                    const isPurity22K = purity === '22K';
+                    const isGoldItem = category.includes('Gold');
+                    console.log( item);
+                    
+                    const hsnCode = (isPurity22K && isGoldItem) ? '7113' : '';
+                    
+                    // Get HUID if available
+                    const huid = item.isCustomItem 
+                      ? (item.customProductDetails?.huid || '-')
+                      : (item.product?.huidNumber || '-');
+                    
                     return (
                       <TableRow key={index}>
                         <TableCell>{index + 1}</TableCell>
@@ -568,13 +570,12 @@ const SaleDetail = () => {
                             ? item.customProductDetails.name
                             : item.product?.name || 'Product Not Found'}
                           <Typography variant="caption" display="block" color="text.secondary">
-                            {item.isCustomItem 
-                              ? item.customProductDetails.category 
-                              : item.product?.category || '-'}
+                            {category || '-'}
                           </Typography>
                         </TableCell>
+                        <TableCell>{purity}</TableCell>
                         <TableCell>{huid}</TableCell>
-                        <TableCell>{hsnCode}</TableCell>
+                        <TableCell>{hsnCode || '-'}</TableCell>
                         <TableCell align="right">{item.quantity}</TableCell>
                         <TableCell align="right">{`${grossWeight} ${weightType}`}</TableCell>
                         <TableCell align="right">{`${netWeight} ${weightType}`}</TableCell>
@@ -663,6 +664,16 @@ const SaleDetail = () => {
             const metalValue = netWeight * rate;
             const makingCharge = (metalValue * makingChargesPercent / 100);
             
+            const purity = item.isCustomItem
+              ? item.customProductDetails?.purity || item._displayProduct?.purity || '-'
+              : item.product?.purity || item.purity || '-';
+            const category = item.isCustomItem
+              ? item.customProductDetails?.category || ''
+              : item.product?.category || '';
+            const isPurity22K = purity === '22K';
+            const isGoldItem = category.includes('Gold');
+            const hsnCode = (isPurity22K && isGoldItem) ? '7113' : '';
+            
             return {
               description: item.isCustomItem 
                 ? item.customProductDetails.name 
@@ -671,13 +682,15 @@ const SaleDetail = () => {
                 ? item.customProductDetails.category 
                 : item.product?.category,
               purity: item.isCustomItem 
-                ? item.customProductDetails.purity 
-                : item.product?.purity,
+                ? item.customProductDetails?.purity || ''
+                : item.product?.purity || item.purity || '',
               grossWeight: item.grossWeight || item.weight,
+              netWeight: netWeight,
               weight: netWeight,
               rate: rate,
-              makingCharge: makingCharge, // Include the calculated making charge
-              total: metalValue + makingCharge
+              makingCharge: makingCharge,
+              total: metalValue + makingCharge,
+              hsnCode: hsnCode
             };
           }),
           subTotal: sale.subTotal,
