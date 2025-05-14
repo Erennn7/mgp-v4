@@ -97,9 +97,11 @@ const ProductDetail = () => {
     setSalesLoading(true);
     try {
       const response = await api.get(`/sales/product/${id}`);
-      setSales(response.data.data);
+      setSales(response.data.data || []);
     } catch (err) {
       console.error('Sales fetch error:', err);
+      // Set an empty array if there's an error (like 404)
+      setSales([]);
     } finally {
       setSalesLoading(false);
     }
@@ -108,7 +110,10 @@ const ProductDetail = () => {
   // Fetch all product-related data
   const fetchAllData = () => {
     fetchProduct();
-    fetchSales();
+    // Temporarily disable sales history fetching as the endpoint doesn't exist
+    // fetchSales();
+    setSalesLoading(false);
+    setSales([]);
   };
 
   useEffect(() => {
@@ -494,14 +499,17 @@ const ProductDetail = () => {
             </Box>
             <Divider sx={{ mb: 3 }} />
             
-            <DataTable
-              rows={sales}
-              columns={salesColumns}
-              loading={salesLoading}
-              getRowId={(row) => row._id}
-              height={400}
-              quickSearch={false}
-            />
+            {salesLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <Box sx={{ py: 3, textAlign: 'center' }}>
+                <Typography variant="body1" color="text.secondary">
+                  No sales history available for this product.
+                </Typography>
+              </Box>
+            )}
           </Paper>
         </Grid>
       </Grid>
