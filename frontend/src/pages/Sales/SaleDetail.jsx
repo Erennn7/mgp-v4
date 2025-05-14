@@ -685,6 +685,7 @@ const SaleDetail = () => {
           invoiceNumber: sale.invoiceNumber,
           date: sale.createdAt,
           customer: sale.customer,
+          discount: sale.discount,
           items: sale.items.map(item => {
             // Get the complete product details if available
             const fullProductDetails = item.isCustomItem ? null : 

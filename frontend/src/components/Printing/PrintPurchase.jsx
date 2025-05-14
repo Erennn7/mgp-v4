@@ -89,13 +89,10 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
             <TableHead>
               <TableRow>
                 <TableCell align="center" width="4%">Sr.</TableCell>
-                <TableCell width="22%">Particulars</TableCell>
-                <TableCell align="center" width="9%">HUID</TableCell>
-                <TableCell align="center" width="6%">HSN</TableCell>
-                <TableCell align="center" width="8%">Gross Wt.</TableCell>
-                <TableCell align="center" width="8%">Net Wt.</TableCell>
-                <TableCell align="right" width="12%">Rate</TableCell>
-                <TableCell align="right" width="12%">Amount</TableCell>
+                <TableCell width="46%">Particulars</TableCell>
+                <TableCell align="center" width="14%">Weight</TableCell>
+                <TableCell align="right" width="15%">Rate</TableCell>
+                <TableCell align="right" width="15%">Amount</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -103,7 +100,8 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
                 // Simple validation - just ensure numbers are parsed properly
                 const rate = item.rate ? parseFloat(item.rate) : (item.ratePerUnit ? parseFloat(item.ratePerUnit) : 0);
                 const weight = item.weight ? parseFloat(item.weight) : 0;
-                const totalAmount = rate * weight;
+                const purity = item.purity ? parseFloat(item.purity) / 100 : 1;
+                const totalAmount = rate * weight * purity;
                 
                 // HSN code logic
                 const getHSNCode = (item) => {
@@ -126,19 +124,12 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
                   <TableRow key={index}>
                     <TableCell align="center">{index + 1}</TableCell>
                     <TableCell sx={{ whiteSpace: 'normal', wordWrap: 'break-word' }}>
-                      {item.description || `${item.category || ''} ${item.purity || ''}`}
+                      {item.description ? 
+                        item.description.replace(/\s*\(\d+(\.\d+)?\)\s*/i, '').replace(/\s*\d+(\.\d+)?(%|k|kt|karat|carat)\s*/i, '') : 
+                        item.category ? item.category.replace(/\s*\(\d+(\.\d+)?\)\s*/i, '') : 'Jewellery'}
                     </TableCell>
                     <TableCell align="center">
-                      {item.huid || '-'}
-                    </TableCell>
-                    <TableCell align="center">
-                      {getHSNCode(item)}
-                    </TableCell>
-                    <TableCell align="center">
-                      {item.grossWeight ? `${parseFloat(item.grossWeight).toFixed(3)}g` : '-'}
-                    </TableCell>
-                    <TableCell align="center">
-                      {item.netWeight ? `${parseFloat(item.netWeight).toFixed(3)}g` : '-'}
+                      {item.weight ? `${parseFloat(item.weight).toFixed(3)}g` : '-'}
                     </TableCell>
                     <TableCell align="right">{rate > 0 ? `₹${rate.toLocaleString()}` : '-'}</TableCell>
                     <TableCell align="right">{totalAmount > 0 ? `₹${totalAmount.toLocaleString()}` : '-'}</TableCell>
@@ -154,9 +145,6 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
                   <TableCell></TableCell>
                   <TableCell></TableCell>
                   <TableCell></TableCell>
-                  <TableCell></TableCell>
-                  <TableCell></TableCell>
-                  <TableCell></TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -165,19 +153,22 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
 
         {/* Calculate total values */}
         {(() => {
-          // Calculate total as sum of all item totals
+          // Get the total directly from purchaseData.amount if available
+          // as that is the actual amount paid
           let calculatedTotal = 0;
           
           if (purchaseData?.items?.length > 0) {
             purchaseData.items.forEach(item => {
               const rate = item.rate ? parseFloat(item.rate) : (item.ratePerUnit ? parseFloat(item.ratePerUnit) : 0);
               const weight = item.weight ? parseFloat(item.weight) : 0;
-              calculatedTotal += (rate * weight);
+              const purity = item.purity ? parseFloat(item.purity) / 100 : 1;
+              calculatedTotal += (rate * weight * purity);
             });
           }
           
-          // Use purchaseData.total if available, otherwise use calculated
-          const total = purchaseData?.total ? parseFloat(purchaseData.total) : calculatedTotal;
+          // First try amount, then total, then calculated
+          const totalAmount = purchaseData?.amount ? parseFloat(purchaseData.amount) : 
+                              (purchaseData?.total ? parseFloat(purchaseData.total) : calculatedTotal);
           
           // No GST calculation for purchases
           
@@ -189,7 +180,7 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, py: 0.5, backgroundColor: 'white' }}>
                     <Typography variant="body2" sx={{ fontSize: '9pt', fontWeight: 'bold', color: '#000' }}>Total Amount:</Typography>
                     <Typography variant="body2" sx={{ fontSize: '9pt', fontWeight: 'bold', color: '#000' }}>
-                      ₹{total.toLocaleString()}
+                      ₹{totalAmount.toLocaleString()}
                     </Typography>
                   </Box>
                 </Box>
@@ -236,12 +227,14 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
       purchaseData.items.forEach(item => {
         const rate = item.rate ? parseFloat(item.rate) : (item.ratePerUnit ? parseFloat(item.ratePerUnit) : 0);
         const weight = item.weight ? parseFloat(item.weight) : 0;
-        calculatedTotal += (rate * weight);
+        const purity = item.purity ? parseFloat(item.purity) / 100 : 1;
+        calculatedTotal += (rate * weight * purity);
       });
     }
     
-    // Use purchaseData.total if available, otherwise use calculated
-    const total = purchaseData?.total ? parseFloat(purchaseData.total) : calculatedTotal;
+    // First try amount, then total, then calculated
+    const totalAmount = purchaseData?.amount ? parseFloat(purchaseData.amount) : 
+                        (purchaseData?.total ? parseFloat(purchaseData.total) : calculatedTotal);
     
     // No GST calculation for purchases
 
@@ -268,54 +261,34 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
           <thead>
             <tr>
               <th style="width: 4%;">Sr.</th>
-              <th style="width: 22%;">Particulars</th>
-              <th style="width: 9%;">HUID</th>
-              <th style="width: 6%;">HSN</th>
-              <th style="width: 8%;">Gross Wt.</th>
-              <th style="width: 8%;">Net Wt.</th>
-              <th style="width: 12%;" class="text-right">Rate</th>
-              <th style="width: 12%;" class="text-right">Amount</th>
+              <th style="width: 46%;">Particulars</th>
+              <th style="width: 14%;" class="text-center">Weight</th>
+              <th style="width: 15%;" class="text-right">Rate</th>
+              <th style="width: 15%;" class="text-right">Amount</th>
             </tr>
           </thead>
           <tbody>
             ${purchaseData?.items?.map((item, index) => {
               const rate = item.rate ? parseFloat(item.rate) : (item.ratePerUnit ? parseFloat(item.ratePerUnit) : 0);
               const weight = item.weight ? parseFloat(item.weight) : 0;
-              const totalAmount = rate * weight;
-              
-              // HSN code logic
-              const getHSNCode = (item) => {
-                const purity = (item.purity || '').toLowerCase().trim();
-                
-                // Check for 22K format
-                if (purity === '22k' || purity === '22 k' || purity === '22 kt' || purity === '22kt') {
-                  return '7113';
-                }
-                
-                // Check for percentage format (91.6%)
-                if (purity === '91.6%' || purity === '91.6' || purity === '91.6 %') {
-                  return '7113';
-                }
-                
-                return '-';
-              };
+              const purity = item.purity ? parseFloat(item.purity) / 100 : 1;
+              const totalAmount = rate * weight * purity;
               
               return `<tr>
                 <td class="text-center">${index + 1}</td>
-                <td>${item.description || `${item.category || ''} ${item.purity || ''}`}</td>
-                <td class="text-center">${item.huid || '-'}</td>
-                <td class="text-center">${getHSNCode(item)}</td>
-                <td class="text-center">${item.grossWeight ? `${parseFloat(item.grossWeight).toFixed(3)}g` : '-'}</td>
-                <td class="text-center">${item.netWeight ? `${parseFloat(item.netWeight).toFixed(3)}g` : '-'}</td>
-                <td class="text-right">${rate > 0 ? `₹${rate.toLocaleString()}` : '-'}</td>
-                <td class="text-right">${totalAmount > 0 ? `₹${totalAmount.toLocaleString()}` : '-'}</td>
+                <td>${item.description ? 
+                  item.description.replace(/\s*\(\d+(\.\d+)?\)\s*/i, '').replace(/\s*\d+(\.\d+)?(%|k|kt|karat|carat)\s*/i, '') : 
+                  item.category ? item.category.replace(/\s*\(\d+(\.\d+)?\)\s*/i, '') : 'Jewellery'}</td>
+                <td class="text-center">${item.weight ? `${parseFloat(item.weight).toFixed(3)}g` : '-'}</td>
+                <td class="text-right">₹${rate > 0 ? rate.toLocaleString() : '-'}</td>
+                <td class="text-right">₹${totalAmount > 0 ? totalAmount.toLocaleString() : '-'}</td>
               </tr>`;
             }).join('') || ''}
             
             ${Array.from({ length: Math.max(0, 5 - (purchaseData?.items?.length || 0)) }).map(() => 
               `<tr>
                 <td style="height: 18px;"></td>
-                <td></td><td></td><td></td><td></td><td></td><td></td>
+                <td></td><td></td><td></td><td></td>
               </tr>`
             ).join('')}
           </tbody>
@@ -325,7 +298,7 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
         <div class="totals-box">
           <div class="totals-row">
             <div class="bold">Total Amount:</div>
-            <div class="bold">₹${total.toLocaleString()}</div>
+            <div class="bold">₹${totalAmount.toLocaleString()}</div>
           </div>
         </div>
         

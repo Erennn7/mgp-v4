@@ -111,10 +111,11 @@ const BillPrintTemplate = ({ billData }) => {
             <thead>
               <tr>
                 <th className="border border-gray-300 p-1 text-center w-[4%] font-bold bg-white">Sr.</th>
-                <th className="border border-gray-300 p-1 w-[22%] font-bold bg-white">Particulars</th>
-                <th className="border border-gray-300 p-1 text-center w-[9%] font-bold bg-white">HUID</th>
+                <th className="border border-gray-300 p-1 w-[18%] font-bold bg-white">Particulars</th>
+                <th className="border border-gray-300 p-1 text-center w-[8%] font-bold bg-white">Purity</th>
+                <th className="border border-gray-300 p-1 text-center w-[8%] font-bold bg-white">HUID</th>
                 <th className="border border-gray-300 p-1 text-center w-[6%] font-bold bg-white">HSN</th>
-                <th className="border border-gray-300 p-1 text-center w-[5%] font-bold bg-white">PCS</th>
+                <th className="border border-gray-300 p-1 text-center w-[4%] font-bold bg-white">PCS</th>
                 <th className="border border-gray-300 p-1 text-center w-[8%] font-bold bg-white">Gross Wt.</th>
                 <th className="border border-gray-300 p-1 text-center w-[8%] font-bold bg-white">Net Wt.</th>
                 <th className="border border-gray-300 p-1 text-right w-[10%] font-bold bg-white">Rate</th>
@@ -132,7 +133,10 @@ const BillPrintTemplate = ({ billData }) => {
                   <tr key={index}>
                     <td className="border border-gray-300 p-1 text-center">{index + 1}</td>
                     <td className="border border-gray-300 p-1 break-words">
-                      {item.description || `${item.category || ''} ${item.purity || ''}`}
+                      {item.description || item.category || 'Jewellery'}
+                    </td>
+                    <td className="border border-gray-300 p-1 text-center">
+                      {item.purity || '-'}
                     </td>
                     <td className="border border-gray-300 p-1 text-center">
                       {item.huid || (item.product?.huidNumber) || '-'}
@@ -167,6 +171,7 @@ const BillPrintTemplate = ({ billData }) => {
                   <td className="border border-gray-300"></td>
                   <td className="border border-gray-300"></td>
                   <td className="border border-gray-300"></td>
+                  <td className="border border-gray-300"></td>
                 </tr>
               ))}
             </tbody>
@@ -185,12 +190,22 @@ const BillPrintTemplate = ({ billData }) => {
             calculatedSubTotal += (baseAmount + makingCharge);
           });
           
-          // Calculate tax
+          // Apply discount if available
+          const discountAmount = billData?.discount ? parseFloat(billData.discount) : 0;
+          const discountedSubTotal = calculatedSubTotal - discountAmount;
+          
+          // Calculate tax based on discounted subtotal
           const taxRate = billData?.taxRate || 3;
-          const calculatedTax = calculatedSubTotal * (taxRate / 100);
+          const calculatedTax = discountedSubTotal * (taxRate / 100);
           
           // Calculate grand total
-          const calculatedGrandTotal = calculatedSubTotal + calculatedTax;
+          const calculatedGrandTotal = discountedSubTotal + calculatedTax;
+          
+          // Use the total from billData if provided (takes precedence over calculation)
+          const finalGrandTotal = billData?.total ? parseFloat(billData.total) : calculatedGrandTotal;
+          
+          // Update amount in words
+          const amountInWords = billData?.amountInWords || convertToWords(finalGrandTotal);
           
           return (
             <>
@@ -201,6 +216,18 @@ const BillPrintTemplate = ({ billData }) => {
                     <span className="text-[9pt]">Sub Total:</span>
                     <span className="text-[9pt]">₹{calculatedSubTotal.toLocaleString()}</span>
                   </div>
+                  {discountAmount > 0 && (
+                    <>
+                      <div className="flex justify-between px-4 py-1 border-b border-gray-300 bg-white">
+                        <span className="text-[9pt]">Discount:</span>
+                        <span className="text-[9pt]">-₹{discountAmount.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between px-4 py-1 border-b border-gray-300 bg-white">
+                        <span className="text-[9pt]">Net Amount:</span>
+                        <span className="text-[9pt]">₹{discountedSubTotal.toLocaleString()}</span>
+                      </div>
+                    </>
+                  )}
                   {taxRate > 0 && (
                     <>
                       <div className="flex justify-between px-4 py-1 border-b border-gray-300 bg-white">
@@ -215,7 +242,7 @@ const BillPrintTemplate = ({ billData }) => {
                   )}
                   <div className="flex justify-between px-4 py-1 bg-white">
                     <span className="text-[9pt] font-bold">Grand Total:</span>
-                    <span className="text-[9pt] font-bold">₹{calculatedGrandTotal.toLocaleString()}</span>
+                    <span className="text-[9pt] font-bold">₹{finalGrandTotal.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -223,7 +250,7 @@ const BillPrintTemplate = ({ billData }) => {
               {/* Additional Information */}
               <div className="text-[9pt] mt-4">
                 <p className="text-[9pt] italic">
-                  Amount in words: {billData?.amountInWords || convertToWords(calculatedGrandTotal)}
+                  Amount in words: {amountInWords}
                 </p>
                 <div className="flex justify-between mt-4">
                   <p className="text-[9pt]">

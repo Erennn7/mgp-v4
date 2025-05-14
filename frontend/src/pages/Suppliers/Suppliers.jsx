@@ -532,12 +532,13 @@ const Suppliers = () => {
                     onChange={handleChange}
                     label="Purity"
                   >
-                    <MenuItem value="24K">24K (99.9%)</MenuItem>
-                    <MenuItem value="22K">22K (91.6%)</MenuItem>
-                    <MenuItem value="18K">18K (75%)</MenuItem>
-                    <MenuItem value="14K">14K (58.5%)</MenuItem>
-                    <MenuItem value="92.5">Silver Sterling (92.5%)</MenuItem>
-                    <MenuItem value="99.9">Silver Pure (99.9%)</MenuItem>
+                    <MenuItem value="24K">24K </MenuItem>
+                    <MenuItem value="22K">22K </MenuItem>
+                    <MenuItem value="20K">20K </MenuItem>
+                    <MenuItem value="18K">18K </MenuItem>
+                    <MenuItem value="14K">14K </MenuItem>
+                    <MenuItem value="92.5">Silver Sterling </MenuItem>
+                    <MenuItem value="99.9">Silver Pure </MenuItem>
                     <MenuItem value="Other">Other</MenuItem>
                   </Select>
                 </FormControl>

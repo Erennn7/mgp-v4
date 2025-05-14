@@ -6,6 +6,58 @@ import BillPrintTemplate from './BillPrintTemplate';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+// Function to convert number to words
+const convertToWords = (amount) => {
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+    'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  
+  // Round to 2 decimal places
+  const numString = amount.toFixed(2);
+  const [rupees, paise] = numString.split('.');
+  
+  const convertNumber = (num) => {
+    if (num === 0) return 'Zero';
+    
+    // Handle lakhs, thousands, hundreds
+    const lakh = Math.floor(num / 100000);
+    const thousand = Math.floor((num % 100000) / 1000);
+    const hundred = Math.floor((num % 1000) / 100);
+    const remainder = num % 100;
+    
+    let words = '';
+    
+    if (lakh > 0) {
+      words += (lakh < 20 ? ones[lakh] : tens[Math.floor(lakh / 10)] + (lakh % 10 ? ' ' + ones[lakh % 10] : '')) + ' Lakh ';
+    }
+    
+    if (thousand > 0) {
+      words += (thousand < 20 ? ones[thousand] : tens[Math.floor(thousand / 10)] + (thousand % 10 ? ' ' + ones[thousand % 10] : '')) + ' Thousand ';
+    }
+    
+    if (hundred > 0) {
+      words += ones[hundred] + ' Hundred ';
+    }
+    
+    if (remainder > 0) {
+      if (words !== '') words += 'and ';
+      words += (remainder < 20 ? ones[remainder] : tens[Math.floor(remainder / 10)] + (remainder % 10 ? ' ' + ones[remainder % 10] : ''));
+    }
+    
+    return words;
+  }
+  
+  let result = convertNumber(parseInt(rupees));
+  
+  if (parseInt(paise) > 0) {
+    result += ' Rupees and ' + convertNumber(parseInt(paise)) + ' Paise';
+  } else {
+    result += ' Rupees Only';
+  }
+  
+  return result;
+};
+
 const PrintBill = ({ open, onClose, billData, directPrint = false, generatePdf = false }) => {
   const printRef = useRef(null);
   const [billHtml, setBillHtml] = useState('');
@@ -34,10 +86,17 @@ const PrintBill = ({ open, onClose, billData, directPrint = false, generatePdf =
         calculatedSubTotal += (baseAmount + makingCharge);
       });
     }
+    console.log(billData);
+    // Apply discount if available
+    const discountAmount = billData?.discount ? parseFloat(billData.discount) : 0;
+    const discountedSubTotal = calculatedSubTotal - discountAmount;
     
     const taxRate = billData?.taxRate || 0;
-    const calculatedTax = calculatedSubTotal * (taxRate / 100);
-    const calculatedGrandTotal = calculatedSubTotal + calculatedTax;
+    const calculatedTax = discountedSubTotal * (taxRate / 100);
+    const calculatedGrandTotal = discountedSubTotal + calculatedTax;
+    
+    // Use the total from billData if provided (takes precedence over calculation)
+    const finalGrandTotal = billData?.total ? parseFloat(billData.total) : calculatedGrandTotal;
 console.log(billData);
 
     // Base HTML for both print and PDF
@@ -63,10 +122,11 @@ console.log(billData);
           <thead>
             <tr>
               <th style="width: 4%;">Sr.</th>
-              <th style="width: 22%;">Particulars</th>
-              <th style="width: 9%;">HUID</th>
+              <th style="width: 18%;">Particulars</th>
+              <th style="width: 8%;">Purity</th>
+              <th style="width: 8%;">HUID</th>
               <th style="width: 6%;">HSN</th>
-              <th style="width: 5%;">PCS</th>
+              <th style="width: 4%;">PCS</th>
               <th style="width: 8%;">Gross Wt.</th>
               <th style="width: 8%;">Net Wt.</th>
               <th style="width: 10%;" class="text-right">Rate</th>
@@ -107,7 +167,8 @@ console.log(billData);
               
               return `<tr>
                 <td class="text-center">${index + 1}</td>
-                <td>${item.description || `${item.category || ''} ${item.purity || ''}`}</td>
+                <td>${item.description || item.category || 'Jewellery'}</td>
+                <td class="text-center">${item.purity || '-'}</td>
                 <td class="text-center">${item.huid || (item.product?.huidNumber) || '-'}</td>
                 <td class="text-center">${getHSNCode(item)}</td>
                 <td class="text-center">${item.quantity || 1}</td>
@@ -122,7 +183,7 @@ console.log(billData);
             ${Array.from({ length: Math.max(0, 5 - (billData?.items?.length || 0)) }).map(() => 
               `<tr>
                 <td style="height: 18px;"></td>
-                <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
               </tr>`
             ).join('')}
           </tbody>
@@ -134,6 +195,16 @@ console.log(billData);
             <div>Sub Total:</div>
             <div>₹${calculatedSubTotal.toLocaleString()}</div>
           </div>
+          ${discountAmount > 0 ? `
+          <div class="totals-row">
+            <div>Discount:</div>
+            <div>-₹${discountAmount.toLocaleString()}</div>
+          </div>
+          <div class="totals-row">
+            <div>Net Amount:</div>
+            <div>₹${discountedSubTotal.toLocaleString()}</div>
+          </div>
+          ` : ''}
           ${taxRate > 0 ? `
           <div class="totals-row">
             <div>CGST (${taxRate/2}%):</div>
@@ -146,12 +217,12 @@ console.log(billData);
           ` : ''}
           <div class="totals-row">
             <div class="bold">Grand Total:</div>
-            <div class="bold">₹${calculatedGrandTotal.toLocaleString()}</div>
+            <div class="bold">₹${finalGrandTotal.toLocaleString()}</div>
           </div>
         </div>
         
         <div class="amount-words">
-          Amount in words: ${billData?.amountInWords || ''}
+          Amount in words: ${billData?.amountInWords || convertToWords(finalGrandTotal)}
         </div>
         
         <div class="footer-info">
