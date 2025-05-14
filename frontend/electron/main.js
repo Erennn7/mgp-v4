@@ -28,7 +28,7 @@ debug(`App name: ${app.getName()}`);
 debug(`Current directory: ${__dirname}`);
 
 // Set API URL for both development and production
-process.env.VITE_API_URL = 'https://jewelry-management-api.onrender.com/api';
+process.env.VITE_API_URL = 'http://localhost:5000/api/api';
 debug(`API URL set to: ${process.env.VITE_API_URL}`);
 
 // Examine actual dist folder existence and contents

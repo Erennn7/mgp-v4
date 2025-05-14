@@ -201,14 +201,18 @@ const BillPrintTemplate = ({ billData }) => {
                     <span className="text-[9pt]">Sub Total:</span>
                     <span className="text-[9pt]">₹{calculatedSubTotal.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between px-4 py-1 border-b border-gray-300 bg-white">
-                    <span className="text-[9pt]">CGST ({taxRate/2}%):</span>
-                    <span className="text-[9pt]">₹{(calculatedTax/2).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between px-4 py-1 border-b border-gray-300 bg-white">
-                    <span className="text-[9pt]">SGST ({taxRate/2}%):</span>
-                    <span className="text-[9pt]">₹{(calculatedTax/2).toLocaleString()}</span>
-                  </div>
+                  {taxRate > 0 && (
+                    <>
+                      <div className="flex justify-between px-4 py-1 border-b border-gray-300 bg-white">
+                        <span className="text-[9pt]">CGST ({taxRate/2}%):</span>
+                        <span className="text-[9pt]">₹{(calculatedTax/2).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between px-4 py-1 border-b border-gray-300 bg-white">
+                        <span className="text-[9pt]">SGST ({taxRate/2}%):</span>
+                        <span className="text-[9pt]">₹{(calculatedTax/2).toLocaleString()}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between px-4 py-1 bg-white">
                     <span className="text-[9pt] font-bold">Grand Total:</span>
                     <span className="text-[9pt] font-bold">₹{calculatedGrandTotal.toLocaleString()}</span>
@@ -233,11 +237,24 @@ const BillPrintTemplate = ({ billData }) => {
       </div>
       
       {/* GSTIN in bottom strip */}
-      <div className="absolute bottom-[10mm] w-full text-center text-[10pt] font-bold">
-        <p className="text-[10pt]">
-          GSTIN: 27DGJPP9641E1ZZ
-        </p>
-      </div>
+      {(() => {
+        // Calculate tax rate to determine if GSTIN should be shown
+        const taxRate = billData?.taxRate || 0;
+        
+        // Only show GSTIN if tax rate is greater than 0
+        if (taxRate > 0) {
+          return (
+            <div className="absolute bottom-[10mm] w-full text-center text-[10pt] font-bold">
+              <p className="text-[10pt]">
+                GSTIN: 27DGJPP9641E1ZZ
+              </p>
+            </div>
+          );
+        }
+        
+        // Return null if tax rate is 0
+        return null;
+      })()}
     </div>
   );
 };

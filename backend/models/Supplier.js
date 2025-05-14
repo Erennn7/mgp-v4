@@ -1,20 +1,49 @@
 const mongoose = require('mongoose');
-
 const SupplierItemSchema = new mongoose.Schema({
   category: {
     type: String,
     required: [true, 'Please add a category'],
-    enum: [
-      'Gold Jewelry',
-      'Silver Jewelry',
-      'Diamond Jewelry',
-      'Gemstone Jewelry',
-      'Gold Coins',
-      'Silver Coins',
-      'Raw Gold',
-      'Raw Silver',
-      'Other'
-    ]
+    validate: {
+      validator: function(v) {
+        // Allow predefined categories or any custom category
+        const predefinedCategories = [
+          'Gold Jewelry',
+          'Silver Jewelry',
+          'Diamond Jewelry',
+          'Gemstone Jewelry',
+          'Gold Coins',
+          'Silver Coins',
+          'Raw Gold',
+          'Raw Silver',
+          'Other'
+        ];
+        return predefinedCategories.includes(v) || v.length >= 2; // Allow any custom category with at least 2 characters
+      },
+      message: props => `${props.value} is not a valid category. It must be either a predefined category or a custom category with at least 2 characters.`
+    }
+  },
+  itemType: {
+    type: String,
+    required: [true, 'Please add an item type'],
+    validate: {
+      validator: function(v) {
+        // Allow predefined types or any custom type
+        const predefinedTypes = [
+          'Ring',
+          'Necklace',
+          'Bracelet',
+          'Earring',
+          'Chain',
+          'Bangle',
+          'Pendant',
+          'Coin',
+          'Bar',
+          'Other'
+        ];
+        return predefinedTypes.includes(v) || v.length >= 2; // Allow any custom type with at least 2 characters
+      },
+      message: props => `${props.value} is not a valid item type. It must be either a predefined type or a custom type with at least 2 characters.`
+    }
   },
   description: {
     type: String,

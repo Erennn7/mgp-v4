@@ -44,10 +44,10 @@ contextBridge.exposeInMainWorld('electron', {
 
 // Expose environment variables to the renderer process
 contextBridge.exposeInMainWorld('env', {
-  apiUrl: 'https://jewelry-management-api.onrender.com/api'
+  apiUrl: 'http://localhost:5000/api'
 });
 
 // Log for debugging
-console.log('Preload script executed, API URL set to: https://jewelry-management-api.onrender.com/api');
+console.log('Preload script executed, API URL set to:http://localhost:5000/api');
 
 debug('Preload script completed'); 

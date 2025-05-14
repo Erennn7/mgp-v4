@@ -134,14 +134,16 @@ console.log(billData);
             <div>Sub Total:</div>
             <div>₹${calculatedSubTotal.toLocaleString()}</div>
           </div>
+          ${taxRate > 0 ? `
           <div class="totals-row">
             <div>CGST (${taxRate/2}%):</div>
-                <div>₹${taxRate === 0 ? '0' : (calculatedTax/2).toLocaleString()}</div>
+            <div>₹${(calculatedTax/2).toLocaleString()}</div>
           </div>
           <div class="totals-row">
             <div>SGST (${taxRate/2}%):</div>
-            <div>₹${taxRate === 0 ? '0' : (calculatedTax/2).toLocaleString()}</div>
+            <div>₹${(calculatedTax/2).toLocaleString()}</div>
           </div>
+          ` : ''}
           <div class="totals-row">
             <div class="bold">Grand Total:</div>
             <div class="bold">₹${calculatedGrandTotal.toLocaleString()}</div>
@@ -156,9 +158,11 @@ console.log(billData);
           <div>Payment Mode: ${billData?.paymentMethod || 'Cash'}</div>
         </div>
         
+        ${taxRate > 0 ? `
         <div style="margin-top: 10px; text-align: center; width: 100%; font-weight: bold;">
           GSTIN: 27DGJPP9641E1ZZ
         </div>
+        ` : ''}
       </div>
     `;
 
@@ -265,7 +269,21 @@ console.log(billData);
           </head>
           <body>
             <div class="print-content">
-              ${baseHtml}
+              ${baseHtml.replace(`<div class="totals-row">
+            <div>CGST (${taxRate/2}%):</div>
+            <div>₹${taxRate === 0 ? '0' : (calculatedTax/2).toLocaleString()}</div>
+          </div>
+          <div class="totals-row">
+            <div>SGST (${taxRate/2}%):</div>
+            <div>₹${taxRate === 0 ? '0' : (calculatedTax/2).toLocaleString()}</div>
+          </div>`, taxRate > 0 ? `<div class="totals-row">
+            <div>CGST (${taxRate/2}%):</div>
+            <div>₹${(calculatedTax/2).toLocaleString()}</div>
+          </div>
+          <div class="totals-row">
+            <div>SGST (${taxRate/2}%):</div>
+            <div>₹${(calculatedTax/2).toLocaleString()}</div>
+          </div>` : '')}
             </div>
           </body>
         </html>
@@ -489,7 +507,21 @@ console.log(billData);
                 </div>
               </div>
               
-              ${baseHtml}
+              ${baseHtml.replace(`<div class="totals-row">
+            <div>CGST (${taxRate/2}%):</div>
+            <div>₹${taxRate === 0 ? '0' : (calculatedTax/2).toLocaleString()}</div>
+          </div>
+          <div class="totals-row">
+            <div>SGST (${taxRate/2}%):</div>
+            <div>₹${taxRate === 0 ? '0' : (calculatedTax/2).toLocaleString()}</div>
+          </div>`, taxRate > 0 ? `<div class="totals-row">
+            <div>CGST (${taxRate/2}%):</div>
+            <div>₹${(calculatedTax/2).toLocaleString()}</div>
+          </div>
+          <div class="totals-row">
+            <div>SGST (${taxRate/2}%):</div>
+            <div>₹${(calculatedTax/2).toLocaleString()}</div>
+          </div>` : '')}
               
               <!-- Footer -->
               <div class="footer">
@@ -499,7 +531,7 @@ console.log(billData);
                 </div>
                 <div class="certified">
                   <p style="margin: 0; font-size: 9pt;">Certified that the particulars given above are true and correct</p>
-                  <p style="margin-top: 8px; font-size: 10pt; font-weight: bold;">GSTIN: 27DGJPP9641E1ZZ</p>
+                  ${taxRate > 0 ? `<p style="margin-top: 8px; font-size: 10pt; font-weight: bold;">GSTIN: 27DGJPP9641E1ZZ</p>` : ''}
                 </div>
                 <div class="company-sign">
                   <p class="marathi">एम. जी. पोतदार कंपनी</p>

@@ -148,15 +148,16 @@ const SupplierDetail = () => {
       let currentY = startY + 25;
       doc.setFont('helvetica', 'bold');
       doc.text('Sr', 14, currentY);
-      doc.text('Description', 25, currentY);
-      doc.text('HUID', 100, currentY);
-      doc.text('HSN', 130, currentY);
-      doc.text('PCS', 150, currentY);
-      doc.text('Gross Weight', 165, currentY);
-      doc.text('Net Weight', 195, currentY);
-      doc.text('Rate / Gms', 225, currentY);
-      doc.text('Making Charges', 255, currentY);
-      doc.text('Amount', 290, currentY);
+      doc.text('Item Type', 25, currentY);
+      doc.text('Description', 100, currentY);
+      doc.text('HUID', 130, currentY);
+      doc.text('HSN', 150, currentY);
+      doc.text('PCS', 170, currentY);
+      doc.text('Gross Weight', 185, currentY);
+      doc.text('Net Weight', 215, currentY);
+      doc.text('Rate / Gms', 245, currentY);
+      doc.text('Making Charges', 275, currentY);
+      doc.text('Amount', 310, currentY);
       
       currentY += 5;
       doc.setLineWidth(0.1);
@@ -198,15 +199,16 @@ const SupplierDetail = () => {
         
         // Print item details in exact format requested
         doc.text(`${index + 1}`, 14, currentY);
-        doc.text(description, 25, currentY);
-        doc.text(huid, 100, currentY);
-        doc.text(hsn, 130, currentY);
-        doc.text(`${quantity}`, 150, currentY);
-        doc.text(`${grossWeight.toFixed(3)} GRM`, 165, currentY);
-        doc.text(`${netWeight.toFixed(3)} GRM`, 195, currentY);
-        doc.text(`${Number(ratePerUnit).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 225, currentY);
-        doc.text(`${Number(makingCharges).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 255, currentY);
-        doc.text(`${Number(totalAmount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 290, currentY);
+        doc.text(formatValue(item.itemType || 'N/A'), 25, currentY);
+        doc.text(description, 100, currentY);
+        doc.text(huid, 130, currentY);
+        doc.text(hsn, 150, currentY);
+        doc.text(`${quantity}`, 170, currentY);
+        doc.text(`${grossWeight.toFixed(3)} GRM`, 185, currentY);
+        doc.text(`${netWeight.toFixed(3)} GRM`, 215, currentY);
+        doc.text(`${Number(ratePerUnit).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 245, currentY);
+        doc.text(`${Number(makingCharges).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 275, currentY);
+        doc.text(`${Number(totalAmount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 310, currentY);
         
         currentY += 8; // Move to next item
       });
@@ -577,7 +579,9 @@ const SupplierDetail = () => {
               <Table>
                 <TableHead sx={{ bgcolor: 'primary.main', '& .MuiTableCell-root': { color: 'white' } }}>
                   <TableRow>
+                    <TableCell>Date</TableCell>
                     <TableCell>Category</TableCell>
+                    <TableCell>Item Type</TableCell>
                     <TableCell>Description</TableCell>
                     <TableCell>Weight</TableCell>
                     <TableCell>Purity</TableCell>
@@ -589,7 +593,9 @@ const SupplierDetail = () => {
                 <TableBody>
                   {supplierPurchase.items?.map((item, index) => (
                     <TableRow key={index}>
+                      <TableCell>{new Date(supplierPurchase.purchaseDate).toLocaleDateString()}</TableCell>
                       <TableCell>{item.category}</TableCell>
+                      <TableCell>{item.itemType || 'N/A'}</TableCell>
                       <TableCell>{item.description}</TableCell>
                       <TableCell>{item.weight} {item.weightType}</TableCell>
                       <TableCell>{item.purity}</TableCell>
@@ -649,4 +655,4 @@ const SupplierDetail = () => {
   );
 };
 
-export default SupplierDetail; 
+export default SupplierDetail;

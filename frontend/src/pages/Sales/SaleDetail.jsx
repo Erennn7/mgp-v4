@@ -55,6 +55,7 @@ const SaleDetail = () => {
   const [printBillOpen, setPrintBillOpen] = useState(false);
   const [isPrintMode, setIsPrintMode] = useState(false);
   const [isPdfMode, setIsPdfMode] = useState(false);
+  const [productDetails, setProductDetails] = useState({});
 
   // Fetch sale data
   const fetchSale = async () => {
@@ -71,6 +72,36 @@ const SaleDetail = () => {
       setLoading(false);
     }
   };
+
+  // Fetch product details for each item in the sale
+  useEffect(() => {
+    const fetchProductDetails = async () => {
+      if (sale && sale.items) {
+        const productIds = sale.items
+          .filter(item => !item.isCustomItem && item.product?._id)
+          .map(item => item.product._id);
+        
+        const detailsMap = {};
+        
+        for (const productId of productIds) {
+          try {
+            const response = await api.get(`/products/${productId}`);
+            if (response.data && response.data.data) {
+              detailsMap[productId] = response.data.data;
+            }
+          } catch (err) {
+            console.error(`Error fetching product ${productId}:`, err);
+          }
+        }
+        
+        setProductDetails(detailsMap);
+      }
+    };
+    
+    if (sale) {
+      fetchProductDetails();
+    }
+  }, [sale]);
 
   useEffect(() => {
     fetchSale();
@@ -520,23 +551,27 @@ const SaleDetail = () => {
                 </TableHead>
                 <TableBody>
                   {sale.items.map((item, index) => {
+                    // Get the complete product details if available
+                    const fullProductDetails = item.isCustomItem ? null : 
+                      (productDetails[item.product?._id] || item.product);
+                    
                     // Get weights
                     const grossWeight = item.isCustomItem
                       ? item.customProductDetails?.grossWeight || item.customProductDetails?.netWeight || 0
-                      : item.product?.grossWeight || item.weight || 0;
+                      : fullProductDetails?.grossWeight || item.weight || 0;
                       
                     const netWeight = item.isCustomItem
                       ? item.customProductDetails?.netWeight || 0
-                      : item.product?.netWeight || item.weight || 0;
+                      : fullProductDetails?.netWeight || item.weight || 0;
                       
                     const weightType = item.isCustomItem
                       ? item.customProductDetails?.weightType || 'g'
-                      : item.product?.weightType || 'g';
+                      : fullProductDetails?.weightType || 'g';
                     
                     // Calculate making charges in rupees
                     const makingChargesPercent = item.isCustomItem
                       ? (item.customProductDetails?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0)
-                      : (item.product?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0);
+                      : (fullProductDetails?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0);
                       
                     const rate = item.rate || 0;
                     const metalValue = netWeight * rate;
@@ -547,20 +582,20 @@ const SaleDetail = () => {
                     
                     const purity = item.isCustomItem
                       ? item.customProductDetails?.purity || item._displayProduct?.purity || '-'
-                      : item.product?.purity || item.purity || '-';
+                      : fullProductDetails?.purity || item.purity || '-';
                     const category = item.isCustomItem
                       ? item.customProductDetails?.category || ''
-                      : item.product?.category || '';
+                      : fullProductDetails?.category || '';
                     const isPurity22K = purity === '22K';
                     const isGoldItem = category.includes('Gold');
-                    console.log( item);
                     
-                    const hsnCode = (isPurity22K && isGoldItem) ? '7113' : '';
-                    
-                    // Get HUID if available
+                    // Get correct HUID from product
                     const huid = item.isCustomItem 
                       ? (item.customProductDetails?.huid || '-')
-                      : (item.product?.huidNumber || '-');
+                      : (fullProductDetails?.huidNumber || '-');
+                    
+                    // Set HSN code based on purity and category
+                    const hsnCode = (isPurity22K && isGoldItem) ? '7113' : '';
                     
                     return (
                       <TableRow key={index}>
@@ -568,7 +603,7 @@ const SaleDetail = () => {
                         <TableCell>
                           {item.isCustomItem 
                             ? item.customProductDetails.name
-                            : item.product?.name || 'Product Not Found'}
+                            : fullProductDetails?.name || 'Product Not Found'}
                           <Typography variant="caption" display="block" color="text.secondary">
                             {category || '-'}
                           </Typography>
@@ -651,14 +686,18 @@ const SaleDetail = () => {
           date: sale.createdAt,
           customer: sale.customer,
           items: sale.items.map(item => {
+            // Get the complete product details if available
+            const fullProductDetails = item.isCustomItem ? null : 
+              (productDetails[item.product?._id] || item.product);
+              
             // Calculate making charges in rupees
             const netWeight = item.isCustomItem
               ? item.customProductDetails?.netWeight || 0
-              : item.product?.netWeight || item.weight || 0;
+              : fullProductDetails?.netWeight || item.weight || 0;
             
             const makingChargesPercent = item.isCustomItem
               ? (item.customProductDetails?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0)
-              : (item.product?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0);
+              : (fullProductDetails?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0);
             
             const rate = item.rate || 0;
             const metalValue = netWeight * rate;
@@ -666,31 +705,35 @@ const SaleDetail = () => {
             
             const purity = item.isCustomItem
               ? item.customProductDetails?.purity || item._displayProduct?.purity || '-'
-              : item.product?.purity || item.purity || '-';
+              : fullProductDetails?.purity || item.purity || '-';
             const category = item.isCustomItem
               ? item.customProductDetails?.category || ''
-              : item.product?.category || '';
+              : fullProductDetails?.category || '';
             const isPurity22K = purity === '22K';
             const isGoldItem = category.includes('Gold');
             const hsnCode = (isPurity22K && isGoldItem) ? '7113' : '';
             
+            // Get correct HUID value
+            const huid = item.isCustomItem 
+              ? (item.customProductDetails?.huid || '')
+              : (fullProductDetails?.huidNumber || '');
+            
             return {
               description: item.isCustomItem 
                 ? item.customProductDetails.name 
-                : item.product?.name,
-              category: item.isCustomItem 
-                ? item.customProductDetails.category 
-                : item.product?.category,
-              purity: item.isCustomItem 
-                ? item.customProductDetails?.purity || ''
-                : item.product?.purity || item.purity || '',
-              grossWeight: item.grossWeight || item.weight,
+                : fullProductDetails?.name || 'Product',
+              category: category,
+              purity: purity,
+              grossWeight: item.isCustomItem
+                ? item.customProductDetails?.grossWeight || item.weight
+                : fullProductDetails?.grossWeight || item.weight,
               netWeight: netWeight,
               weight: netWeight,
               rate: rate,
               makingCharge: makingCharge,
               total: metalValue + makingCharge,
-              hsnCode: hsnCode
+              hsnCode: hsnCode,
+              huid: huid
             };
           }),
           subTotal: sale.subTotal,

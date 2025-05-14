@@ -74,7 +74,8 @@ const Suppliers = () => {
   const [formData, setFormData] = useState({
     supplierName: '',
     supplierContact: '',
-    metalType: 'Gold',
+    metalType: '',
+    itemType: '',
     grossWeight: '',
     netWeight: '',
     hasStones: false,
@@ -176,7 +177,7 @@ const Suppliers = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.supplierName || !formData.metalType || !formData.netWeight || !formData.pricePerGram) {
+    if (!formData.supplierName || !formData.metalType || !formData.itemType || !formData.netWeight || !formData.pricePerGram) {
       showSnackbar('Please fill all required fields', 'error');
       return;
     }
@@ -202,6 +203,7 @@ const Suppliers = () => {
           {
             category: formData.metalType.includes('Gold') ? 'Raw Gold' : 
                       formData.metalType.includes('Silver') ? 'Raw Silver' : 'Other',
+            itemType: formData.itemType || 'Other',
             description: `${formData.metalType} (${formData.purity})${formData.hasStones ? ' with stones' : ''}`,
             weightType: 'Gram',
             weight: parseFloat(formData.netWeight),
@@ -234,7 +236,8 @@ const Suppliers = () => {
       setFormData({
         supplierName: '',
         supplierContact: '',
-        metalType: 'Gold',
+        metalType: '',
+        itemType: '',
         grossWeight: '',
         netWeight: '',
         hasStones: false,
@@ -320,6 +323,18 @@ const Suppliers = () => {
         headerName: 'Supplier',
         flex: 1.5,
         valueGetter: (params) => params.row.supplier?.name || 'N/A'
+      },
+      {
+        field: 'itemType',
+        headerName: 'Item Type',
+        flex: 1,
+        valueGetter: (params) => {
+          // Get first item's itemType from the items array, if it exists
+          if (params.row.items && params.row.items.length > 0) {
+            return params.row.items[0].itemType || 'N/A';
+          }
+          return 'N/A';
+        }
       },
       {
         field: 'purchaseDate',
@@ -484,21 +499,27 @@ const Suppliers = () => {
               </Grid>
               
               <Grid item xs={12} sm={6} md={3}>
-                <FormControl fullWidth required>
-                  <InputLabel id="metal-type-label">Metal Type</InputLabel>
-                  <Select
-                    labelId="metal-type-label"
-                    name="metalType"
-                    value={formData.metalType}
-                    onChange={handleChange}
-                    label="Metal Type"
-                  >
-                    <MenuItem value="Gold">Gold</MenuItem>
-                    <MenuItem value="Silver">Silver</MenuItem>
-                    <MenuItem value="Platinum">Platinum</MenuItem>
-                    <MenuItem value="Other">Other</MenuItem>
-                  </Select>
-                </FormControl>
+                <TextField
+                  required
+                  fullWidth
+                  label="Metal Type"
+                  name="metalType"
+                  value={formData.metalType}
+                  onChange={handleChange}
+                  placeholder="Enter metal type"
+                />
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  required
+                  fullWidth
+                  label="Item Type"
+                  name="itemType"
+                  value={formData.itemType}
+                  onChange={handleChange}
+                  placeholder="Enter item type"
+                />
               </Grid>
               
               <Grid item xs={12} sm={6} md={3}>

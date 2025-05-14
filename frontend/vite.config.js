@@ -15,7 +15,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://jewelry-management-api.onrender.com',
+        target: 'http://localhost:5000/api',
         changeOrigin: true,
         secure: false
       }
