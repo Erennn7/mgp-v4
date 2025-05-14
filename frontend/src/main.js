@@ -7,7 +7,7 @@ process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 const isDev = process.env.NODE_ENV === 'development';
 
 // Set API URL for both development and production
-process.env.VITE_API_URL = 'http://localhost:5000';
+process.env.VITE_API_URL = 'https://jewelry-management-api.onrender.com';
 
 // Keep a global reference of the window object to prevent garbage collection
 let mainWindow;
