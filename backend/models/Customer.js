@@ -19,6 +19,12 @@ const CustomerSchema = new mongoose.Schema({
     required: [true, 'Please add a phone number'],
     maxlength: [20, 'Phone number can not be more than 20 characters']
   },
+  gstin: {
+    type: String,
+    trim: true,
+    maxlength: [15, 'GSTIN must be 15 characters'],
+    minlength: [15, 'GSTIN must be 15 characters']
+  },
   idNumber: {
     type: String,
     trim: true,
