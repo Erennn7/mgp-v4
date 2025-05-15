@@ -96,6 +96,20 @@ const BillPrintTemplate = ({ billData }) => {
           </div>
         </div>
 
+        {/* Bill Type Indicator */}
+        <div className="mb-2 text-center">
+          <span className={`font-bold inline-block py-1 px-3 text-[12pt] ${billData?.taxRate > 0 || billData?.tax > 0 ? 'text-blue-700 bg-blue-50 border-blue-200' : 'text-emerald-700 bg-emerald-50 border-emerald-200'} border rounded-md`}>
+            {billData?.taxRate > 0 || billData?.tax > 0 ? 'GST INVOICE' : 'RETAIL INVOICE'}
+            {billData?.serialNumber && (
+              <span className="ml-2 text-[10pt]">
+                {billData?.taxRate > 0 || billData?.tax > 0 ? 
+                  `GST-${Number(billData.serialNumber) + 54}` : 
+                  `REG-${Number(billData.serialNumber)}`}
+              </span>
+            )}
+          </span>
+        </div>
+
         {/* Customer Information */}
         <div className="mb-4">
           <span className="font-bold text-[10pt]">Customer:</span>{' '}
@@ -103,6 +117,12 @@ const BillPrintTemplate = ({ billData }) => {
             {billData?.customer?.name || 'Customer Name'},
             {billData?.customer?.phone ? ` Ph: ${billData.customer.phone}` : ''}
           </span>
+          {billData?.customer?.gstin && (
+            <div className="mt-1">
+              <span className="font-bold text-[10pt]">Customer GSTIN:</span>{' '}
+              <span className="text-[10pt]">{billData.customer.gstin}</span>
+            </div>
+          )}
         </div>
 
         {/* Items Table */}
@@ -267,13 +287,14 @@ const BillPrintTemplate = ({ billData }) => {
       {(() => {
         // Calculate tax rate to determine if GSTIN should be shown
         const taxRate = billData?.taxRate || 0;
-        
+        console.log(billData);
         // Only show GSTIN if tax rate is greater than 0
         if (taxRate > 0) {
           return (
             <div className="absolute bottom-[10mm] w-full text-center text-[10pt] font-bold">
               <p className="text-[10pt]">
                 GSTIN: 27DGJPP9641E1ZZ
+                {billData?.customer?.gstin && ` | Customer GSTIN: ${billData.customer.gstin}`}
               </p>
             </div>
           );

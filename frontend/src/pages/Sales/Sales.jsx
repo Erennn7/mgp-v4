@@ -6,6 +6,11 @@ import {
   Tooltip,
   IconButton,
   CircularProgress,
+  Paper,
+  Grid,
+  Typography,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -39,6 +44,10 @@ const Sales = () => {
     pageSize: 100,
     page: 0,
   });
+  const [gstBillsCount, setGstBillsCount] = useState(0);
+  const [nonGstBillsCount, setNonGstBillsCount] = useState(0);
+  const [currentTab, setCurrentTab] = useState(0); // 0 = All, 1 = GST, 2 = Non-GST
+  const [filteredSales, setFilteredSales] = useState([]);
   const navigate = useNavigate();
 
   // Fetch sales
@@ -51,7 +60,54 @@ const Sales = () => {
           page: paginationModel.page + 1 // API uses 1-based pagination
         }
       });
-      setSales(response.data.data);
+      
+      const salesData = response.data.data;
+      
+      // Group sales by GST and non-GST
+      const gstBills = salesData.filter(sale => sale.tax > 0);
+      const nonGstBills = salesData.filter(sale => sale.tax === 0);
+      
+      // Set counts
+      setGstBillsCount(gstBills.length);
+      setNonGstBillsCount(nonGstBills.length);
+      
+      // Assign sequential numbers to each category separately
+      // GST Bills - Sort by creation date first
+      const sortedGstBills = [...gstBills].sort((a, b) => 
+        new Date(a.createdAt) - new Date(b.createdAt)
+      );
+      
+      // Assign serial numbers to GST bills
+      const gstBillsWithSerialNumbers = sortedGstBills.map((sale, index) => ({
+        ...sale,
+        serialNumber: index + 1,
+        serialType: 'GST'
+      }));
+      
+      // Non-GST Bills - Sort by creation date first
+      const sortedNonGstBills = [...nonGstBills].sort((a, b) => 
+        new Date(a.createdAt) - new Date(b.createdAt)
+      );
+      
+      // Assign serial numbers to non-GST bills
+      const nonGstBillsWithSerialNumbers = sortedNonGstBills.map((sale, index) => ({
+        ...sale,
+        serialNumber: index + 1,
+        serialType: 'REG'
+      }));
+      
+      // Combine all sales with their respective serial numbers
+      const allSalesWithSerialNumbers = [
+        ...gstBillsWithSerialNumbers,
+        ...nonGstBillsWithSerialNumbers
+      ];
+      
+      // Store all sales
+      setSales(allSalesWithSerialNumbers);
+      
+      // Update filtered sales based on current tab
+      updateFilteredSales(allSalesWithSerialNumbers, currentTab);
+      
       // Set total count from pagination data
       if (response.data.pagination) {
         setTotalSales(response.data.total || response.data.data.length);
@@ -63,6 +119,29 @@ const Sales = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper to update filtered sales based on tab
+  const updateFilteredSales = (allSales, tabIndex) => {
+    switch (tabIndex) {
+      case 0: // All sales
+        setFilteredSales(allSales);
+        break;
+      case 1: // GST sales
+        setFilteredSales(allSales.filter(sale => sale.tax > 0));
+        break;
+      case 2: // Non-GST sales
+        setFilteredSales(allSales.filter(sale => sale.tax === 0));
+        break;
+      default:
+        setFilteredSales(allSales);
+    }
+  };
+
+  // Handle tab change
+  const handleTabChange = (event, newValue) => {
+    setCurrentTab(newValue);
+    updateFilteredSales(sales, newValue);
   };
 
   useEffect(() => {
@@ -204,6 +283,18 @@ const Sales = () => {
   // Table columns
   const columns = [
     {
+      field: 'serialNumber',
+      headerName: 'Serial #',
+      width: 90,
+      renderCell: (params) => {
+        const prefix = params.row.serialType === 'GST' ? 'GST-' : 'REG-';
+        const number = params.row.serialType === 'GST' 
+          ? Number(params.row.serialNumber) + 54 
+          : Number(params.row.serialNumber);
+        return `${prefix}${number}`;
+      }
+    },
+    {
       field: 'invoiceNumber',
       headerName: 'Invoice #',
       width: 150,
@@ -291,9 +382,89 @@ const Sales = () => {
         onActionClick={handleAddSale}
       />
 
+      {/* Stats Summary */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} md={4}>
+          <Paper
+            elevation={3}
+            sx={{
+              p: 2,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              bgcolor: 'primary.light',
+              color: 'primary.contrastText',
+            }}
+          >
+            <Typography variant="h6">Total Sales</Typography>
+            <Typography variant="h4">{totalSales}</Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Paper
+            elevation={3}
+            sx={{
+              p: 2,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              bgcolor: 'primary.main',
+              color: 'primary.contrastText',
+            }}
+          >
+            <Typography variant="h6">GST Bills</Typography>
+            <Typography variant="h4">{gstBillsCount}</Typography>
+            <Typography variant="caption">With GST tax applied</Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Paper
+            elevation={3}
+            sx={{
+              p: 2,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              bgcolor: 'success.main',
+              color: 'success.contrastText',
+            }}
+          >
+            <Typography variant="h6">Non-GST Bills</Typography>
+            <Typography variant="h4">{nonGstBillsCount}</Typography>
+            <Typography variant="caption">Without GST tax</Typography>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Filter Tabs */}
+      <Paper sx={{ mb: 2 }}>
+        <Tabs value={currentTab} onChange={handleTabChange} variant="fullWidth">
+          <Tab label="All Sales" />
+          <Tab label="GST Bills" />
+          <Tab label="Non-GST Bills" />
+        </Tabs>
+      </Paper>
+
+      {/* Action Bar */}
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between' }}>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={handleAddSale}
+        >
+          Add Sale
+        </Button>
+        <SearchBox
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Search sales..."
+        />
+      </Box>
+
       <DataTable
-        title="Sales List"
-        rows={sales}
+        title={currentTab === 0 ? "All Sales" : (currentTab === 1 ? "GST Bills" : "Non-GST Bills")}
+        rows={filteredSales}
         columns={columns}
         loading={loading}
         error={error}

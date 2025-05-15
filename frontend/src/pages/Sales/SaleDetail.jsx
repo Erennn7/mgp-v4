@@ -56,6 +56,7 @@ const SaleDetail = () => {
   const [isPrintMode, setIsPrintMode] = useState(false);
   const [isPdfMode, setIsPdfMode] = useState(false);
   const [productDetails, setProductDetails] = useState({});
+  const [serialNumber, setSerialNumber] = useState(null);
 
   // Fetch sale data
   const fetchSale = async () => {
@@ -63,6 +64,37 @@ const SaleDetail = () => {
     try {
       const response = await api.get(`/sales/${id}`);
       setSale(response.data.data);
+      
+      // Calculate the serial number for this bill (GST or non-GST)
+      try {
+        // Get all sales to calculate serial number
+        const allSalesResponse = await api.get('/sales');
+        
+        if (allSalesResponse.data.data) {
+          const allSales = allSalesResponse.data.data;
+          const isGstBill = response.data.data.tax > 0;
+          
+          // Filter all sales by GST or non-GST status
+          const sameCategoryBills = allSales.filter(s => 
+            isGstBill ? s.tax > 0 : s.tax === 0
+          );
+          
+          // Sort by creation date
+          const sortedBills = sameCategoryBills.sort((a, b) => 
+            new Date(a.createdAt) - new Date(b.createdAt)
+          );
+          
+          // Find this bill's position in the sorted list (1-based)
+          const billIndex = sortedBills.findIndex(s => s._id === id);
+          if (billIndex !== -1) {
+            setSerialNumber(billIndex + 1);
+          }
+        }
+      } catch (err) {
+        console.error('Error calculating serial number:', err);
+        // If we can't calculate the serial number, continue without it
+      }
+      
       setError(null);
     } catch (err) {
       setError('Failed to load sale data');
@@ -318,314 +350,373 @@ const SaleDetail = () => {
     }).format(value);
   };
 
-  // Loading state
+  // Main render method
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-        <CircularProgress size={60} thickness={4} />
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <CircularProgress />
       </Box>
     );
   }
 
-  // Error state
   if (error || !sale) {
     return (
-      <Box sx={{ textAlign: 'center', mt: 8 }}>
-        <Typography variant="h5" color="error" gutterBottom>
-          {error || 'Sale not found'}
-        </Typography>
-        <Button variant="contained" onClick={() => navigate('/sales')} startIcon={<ArrowBackIcon />}>
+      <Box sx={{ mt: 4 }}>
+        <Typography color="error">{error || 'Sale not found'}</Typography>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/sales')}
+          sx={{ mt: 2 }}
+        >
           Back to Sales
         </Button>
       </Box>
     );
   }
 
+  // Prepare bill data for printing
+  const billData = {
+    invoiceNumber: sale.invoiceNumber,
+    customer: sale.customer,
+    date: sale.createdAt,
+    taxRate: sale.tax,
+    tax: sale.tax,
+    items: sale.items.map(item => {
+      // Get product details if available
+      const productId = item.product?._id;
+      const productDetail = productId && productDetails[productId] ? productDetails[productId] : null;
+      
+      return {
+        description: item.isCustomItem ? 
+          item.customProductDetails?.name || 'Custom Item' : 
+          (item.product?.name || 'Product'),
+        quantity: item.quantity,
+        rate: item.rate,
+        weight: item.weight,
+        netWeight: item.isCustomItem ? 
+          item.customProductDetails?.netWeight : 
+          (productDetail?.netWeight || item.weight),
+        grossWeight: item.isCustomItem ? 
+          item.customProductDetails?.grossWeight : 
+          (productDetail?.grossWeight || item.weight),
+        purity: item.isCustomItem ? 
+          item.customProductDetails?.purity : 
+          (productDetail?.purity || ''),
+        huid: item.isCustomItem ? 
+          item.customProductDetails?.huid : 
+          (productDetail?.huidNumber || ''),
+        makingCharge: item.makingCharges ? (item.rate * item.weight * item.makingCharges / 100) : 0,
+        category: item.isCustomItem ? 
+          item.customProductDetails?.category : 
+          (productDetail?.category || '')
+      };
+    }),
+    subtotal: sale.subTotal,
+    discount: sale.discount,
+    total: sale.total,
+    paymentMethod: sale.paymentMethod,
+    amountInWords: `${convertToWords(sale.total)} Only`,
+    serialNumber: serialNumber
+  };
+
   return (
     <>
-      <Box sx={{ py: 3, px: { xs: 2, md: 3 } }}>
-        <PageHeader
-          title="Sale Details"
-          breadcrumbs={[
-            { label: 'Home', link: '/' },
-            { label: 'Sales', link: '/sales' },
-            { label: 'Sale Details' },
-          ]}
-        >
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant="outlined"
-              color="primary"
-              startIcon={<ArrowBackIcon />}
-              onClick={() => navigate('/sales')}
-            >
-              Back
-            </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<EditIcon />}
-              onClick={handleEditSale}
-            >
-              Edit
-            </Button>
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<DeleteIcon />}
-              onClick={handleDeleteSale}
-            >
-              Delete
-            </Button>
-            <Button
-              variant="outlined"
-              color="primary"
-              startIcon={<PdfIcon />}
-              onClick={generatePDF}
-            >
-              PDF
-            </Button>
-            <Button
-              variant="contained"
-              color="error"
-              startIcon={<PrintIcon />}
-              onClick={handlePrintBill}
-              sx={{ fontWeight: 'bold' }}
-            >
-              Print Bill
-            </Button>
-          </Box>
-        </PageHeader>
+      <PageHeader
+        title="Sale Details"
+        subtitle={`Sale ID: ${sale._id}`}
+        breadcrumbs={[
+          { label: 'Sales', link: '/sales' },
+          { label: sale.invoiceNumber || 'Sale Details' }
+        ]}
+        backButton={true}
+        onBackClick={() => navigate('/sales')}
+      />
 
-        <Grid container spacing={3}>
-          {/* Sale Header Information */}
-          <Grid item xs={12} md={8}>
-            <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ mb: 3 }}>
-                    <Typography variant="subtitle2" color="text.secondary">
-                      Invoice Number
-                    </Typography>
-                    <Typography variant="h6">
-                      {sale.invoiceNumber}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ mb: 3 }}>
-                    <Typography variant="subtitle2" color="text.secondary">
-                      Date
-                    </Typography>
-                    <Typography variant="body1">
-                      {formatDate(sale.createdAt)}
-                    </Typography>
-                  </Box>
-                  
-                  <Box>
-                    <Typography variant="subtitle2" color="text.secondary">
-                      Payment Status
-                    </Typography>
-                    <StatusChip status={sale.paymentStatus} />
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ mb: 3 }}>
-                    <Typography variant="subtitle2" color="text.secondary">
-                      Customer
-                    </Typography>
-                    <Typography variant="body1">
-                      {formatValue(sale.customer?.name)}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ mb: 3 }}>
-                    <Typography variant="subtitle2" color="text.secondary">
-                      Contact
-                    </Typography>
-                    <Typography variant="body1">
-                      {formatValue(sale.customer?.phone)}
-                    </Typography>
-                  </Box>
-                  
-                  <Box>
-                    <Typography variant="subtitle2" color="text.secondary">
-                      Payment Method
-                    </Typography>
-                    <Typography variant="body1">
-                      {formatValue(sale.paymentMethod)}
-                    </Typography>
-                  </Box>
-                </Grid>
-                
-                {sale.notes && (
-                  <Grid item xs={12}>
-                    <Divider sx={{ my: 2 }} />
-                    <Typography variant="subtitle2" color="text.secondary">
-                      Notes
-                    </Typography>
-                    <Typography variant="body2">
-                      {sale.notes}
-                    </Typography>
-                  </Grid>
-                )}
-              </Grid>
-            </Paper>
-          </Grid>
-          
-          {/* Sale Summary */}
-          <Grid item xs={12} md={4}>
-            <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="subtitle1">Items Total:</Typography>
-                <Typography variant="subtitle1">
-                  {formatCurrency(sale.itemsTotal || sale.subTotal)}
-                </Typography>
-              </Box>
-              
-              {sale.makingChargesPercentage > 0 && (
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-                  <Typography variant="subtitle1">Making Charges ({sale.makingChargesPercentage}%):</Typography>
-                  <Typography variant="subtitle1">{formatCurrency(sale.makingChargesAmount)}</Typography>
+      <Grid container spacing={3}>
+        {/* Sale Header */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 3 }}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <ReceiptIcon sx={{ mr: 1, color: 'primary.main' }} />
+                  <Typography variant="h5" component="h2">
+                    Invoice #{sale.invoiceNumber}
+                  </Typography>
                 </Box>
-              )}
+                
+                {/* Bill Type and Serial Number */}
+                <Box sx={{ mt: 1, display: 'flex', alignItems: 'center' }}>
+                  <Chip 
+                    label={sale.tax > 0 
+                      ? `GST INVOICE ${serialNumber ? `(GST-${Number(serialNumber) + 54})` : ''}` 
+                      : `RETAIL INVOICE ${serialNumber ? `(REG-${Number(serialNumber)})` : ''}`}
+                    color={sale.tax > 0 ? "primary" : "success"}
+                    sx={{ fontWeight: 'bold' }}
+                  />
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} md={6} sx={{ textAlign: { xs: 'left', md: 'right' } }}>
+                <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<PrintIcon />}
+                    onClick={handlePrintBill}
+                  >
+                    Print
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<PdfIcon />}
+                    onClick={generatePDF}
+                    color="secondary"
+                  >
+                    PDF
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<EditIcon />}
+                    onClick={handleEditSale}
+                    color="info"
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<DeleteIcon />}
+                    onClick={handleDeleteSale}
+                    color="error"
+                  >
+                    Delete
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
+            
+            {/* Rest of the sale details */}
+            <Grid container spacing={3}>
+              {/* Sale Header Information */}
+              <Grid item xs={12} md={8}>
+                <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} sm={6}>
+                      <Box sx={{ mb: 3 }}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Date
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatDate(sale.createdAt)}
+                        </Typography>
+                      </Box>
+                      
+                      <Box>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Payment Status
+                        </Typography>
+                        <StatusChip status={sale.paymentStatus} />
+                      </Box>
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={6}>
+                      <Box sx={{ mb: 3 }}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Customer
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatValue(sale.customer?.name)}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ mb: 3 }}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Contact
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatValue(sale.customer?.phone)}
+                        </Typography>
+                      </Box>
+                      
+                      <Box>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Payment Method
+                        </Typography>
+                        <Typography variant="body1">
+                          {formatValue(sale.paymentMethod)}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    
+                    {sale.notes && (
+                      <Grid item xs={12}>
+                        <Divider sx={{ my: 2 }} />
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Notes
+                        </Typography>
+                        <Typography variant="body2">
+                          {sale.notes}
+                        </Typography>
+                      </Grid>
+                    )}
+                  </Grid>
+                </Paper>
+              </Grid>
               
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-                <Typography variant="subtitle1">GST ({sale.tax}%):</Typography>
-                <Typography variant="subtitle1">{formatCurrency((sale.subTotal * sale.tax) / 100)}</Typography>
-              </Box>
-              
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-                <Typography variant="subtitle1">Discount:</Typography>
-                <Typography variant="subtitle1">- {formatCurrency(sale.discount || 0)}</Typography>
-              </Box>
-              
-              <Divider sx={{ my: 2 }} />
-              
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="h6">Total:</Typography>
-                <Typography variant="h6">{formatCurrency(sale.total)}</Typography>
-              </Box>
-              
-              {sale.paymentStatus === 'Partial' && (
-                <>
-                  <Divider sx={{ my: 2 }} />
-                  
+              {/* Sale Summary */}
+              <Grid item xs={12} md={4}>
+                <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="subtitle1">Amount Paid:</Typography>
-                    <Typography variant="subtitle1">{formatCurrency(sale.amountPaid)}</Typography>
+                    <Typography variant="subtitle1">Items Total:</Typography>
+                    <Typography variant="subtitle1">
+                      {formatCurrency(sale.itemsTotal || sale.subTotal)}
+                    </Typography>
+                  </Box>
+                  
+                  {sale.makingChargesPercentage > 0 && (
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                      <Typography variant="subtitle1">Making Charges ({sale.makingChargesPercentage}%):</Typography>
+                      <Typography variant="subtitle1">{formatCurrency(sale.makingChargesAmount)}</Typography>
+                    </Box>
+                  )}
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                    <Typography variant="subtitle1">GST ({sale.tax}%):</Typography>
+                    <Typography variant="subtitle1">{formatCurrency((sale.subTotal * sale.tax) / 100)}</Typography>
                   </Box>
                   
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-                    <Typography variant="subtitle1">Balance Due:</Typography>
-                    <Typography variant="subtitle1" color="error">
-                      {formatCurrency(sale.total - sale.amountPaid)}
-                    </Typography>
+                    <Typography variant="subtitle1">Discount:</Typography>
+                    <Typography variant="subtitle1">- {formatCurrency(sale.discount || 0)}</Typography>
                   </Box>
-                </>
-              )}
-            </Paper>
-          </Grid>
-          
-          {/* Product Table */}
-          <Grid item xs={12}>
-            <Typography variant="h6" gutterBottom>
-              Products Sold
-            </Typography>
-            <TableContainer component={Paper} variant="outlined">
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Sr</TableCell>
-                    <TableCell>Description</TableCell>
-                    <TableCell>Purity</TableCell>
-                    <TableCell>HUID</TableCell>
-                    <TableCell>HSN</TableCell>
-                    <TableCell align="right">PCS</TableCell>
-                    <TableCell align="right">Gross Weight</TableCell>
-                    <TableCell align="right">Net Weight</TableCell>
-                    <TableCell align="right">Rate/Gms</TableCell>
-                    <TableCell align="right">Making</TableCell>
-                    <TableCell align="right">Amount</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {sale.items.map((item, index) => {
-                    // Get the complete product details if available
-                    const fullProductDetails = item.isCustomItem ? null : 
-                      (productDetails[item.product?._id] || item.product);
-                    
-                    // Get weights
-                    const grossWeight = item.isCustomItem
-                      ? item.customProductDetails?.grossWeight || item.customProductDetails?.netWeight || 0
-                      : fullProductDetails?.grossWeight || item.weight || 0;
+                  
+                  <Divider sx={{ my: 2 }} />
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="h6">Total:</Typography>
+                    <Typography variant="h6">{formatCurrency(sale.total)}</Typography>
+                  </Box>
+                  
+                  {sale.paymentStatus === 'Partial' && (
+                    <>
+                      <Divider sx={{ my: 2 }} />
                       
-                    const netWeight = item.isCustomItem
-                      ? item.customProductDetails?.netWeight || 0
-                      : fullProductDetails?.netWeight || item.weight || 0;
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="subtitle1">Amount Paid:</Typography>
+                        <Typography variant="subtitle1">{formatCurrency(sale.amountPaid)}</Typography>
+                      </Box>
                       
-                    const weightType = item.isCustomItem
-                      ? item.customProductDetails?.weightType || 'g'
-                      : fullProductDetails?.weightType || 'g';
-                    
-                    // Calculate making charges in rupees
-                    const makingChargesPercent = item.isCustomItem
-                      ? (item.customProductDetails?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0)
-                      : (fullProductDetails?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0);
-                      
-                    const rate = item.rate || 0;
-                    const metalValue = netWeight * rate;
-                    const makingCharge = (metalValue * makingChargesPercent / 100);
-                    
-                    // Calculate the subtotal (metalValue + makingCharges) which will be displayed as the Amount
-                    const itemSubtotal = metalValue + makingCharge;
-                    
-                    const purity = item.isCustomItem
-                      ? item.customProductDetails?.purity || item._displayProduct?.purity || '-'
-                      : fullProductDetails?.purity || item.purity || '-';
-                    const category = item.isCustomItem
-                      ? item.customProductDetails?.category || ''
-                      : fullProductDetails?.category || '';
-                    const isPurity22K = purity === '22K';
-                    const isGoldItem = category.includes('Gold');
-                    
-                    // Get correct HUID from product
-                    const huid = item.isCustomItem 
-                      ? (item.customProductDetails?.huid || '-')
-                      : (fullProductDetails?.huidNumber || '-');
-                    
-                    // Set HSN code based on purity and category
-                    const hsnCode = (isPurity22K && isGoldItem) ? '7113' : '';
-                    
-                    return (
-                      <TableRow key={index}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>
-                          {item.isCustomItem 
-                            ? item.customProductDetails.name
-                            : fullProductDetails?.name || 'Product Not Found'}
-                          <Typography variant="caption" display="block" color="text.secondary">
-                            {category || '-'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>{purity}</TableCell>
-                        <TableCell>{huid}</TableCell>
-                        <TableCell>{hsnCode || '-'}</TableCell>
-                        <TableCell align="right">{item.quantity}</TableCell>
-                        <TableCell align="right">{`${grossWeight} ${weightType}`}</TableCell>
-                        <TableCell align="right">{`${netWeight} ${weightType}`}</TableCell>
-                        <TableCell align="right">{formatCurrency(rate)}</TableCell>
-                        <TableCell align="right">{formatCurrency(makingCharge)}</TableCell>
-                        <TableCell align="right">{formatCurrency(itemSubtotal)}</TableCell>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                        <Typography variant="subtitle1">Balance Due:</Typography>
+                        <Typography variant="subtitle1" color="error">
+                          {formatCurrency(sale.total - sale.amountPaid)}
+                        </Typography>
+                      </Box>
+                    </>
+                  )}
+                </Paper>
+              </Grid>
+              
+              {/* Product Table */}
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom>
+                  Products Sold
+                </Typography>
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Sr</TableCell>
+                        <TableCell>Description</TableCell>
+                        <TableCell>Purity</TableCell>
+                        <TableCell>HUID</TableCell>
+                        <TableCell>HSN</TableCell>
+                        <TableCell align="right">PCS</TableCell>
+                        <TableCell align="right">Gross Weight</TableCell>
+                        <TableCell align="right">Net Weight</TableCell>
+                        <TableCell align="right">Rate/Gms</TableCell>
+                        <TableCell align="right">Making</TableCell>
+                        <TableCell align="right">Amount</TableCell>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Grid>
+                    </TableHead>
+                    <TableBody>
+                      {sale.items.map((item, index) => {
+                        // Get the complete product details if available
+                        const fullProductDetails = item.isCustomItem ? null : 
+                          (productDetails[item.product?._id] || item.product);
+                        
+                        // Get weights
+                        const grossWeight = item.isCustomItem
+                          ? item.customProductDetails?.grossWeight || item.customProductDetails?.netWeight || 0
+                          : fullProductDetails?.grossWeight || item.weight || 0;
+                          
+                        const netWeight = item.isCustomItem
+                          ? item.customProductDetails?.netWeight || 0
+                          : fullProductDetails?.netWeight || item.weight || 0;
+                          
+                        const weightType = item.isCustomItem
+                          ? item.customProductDetails?.weightType || 'g'
+                          : fullProductDetails?.weightType || 'g';
+                        
+                        // Calculate making charges in rupees
+                        const makingChargesPercent = item.isCustomItem
+                          ? (item.customProductDetails?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0)
+                          : (fullProductDetails?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0);
+                          
+                        const rate = item.rate || 0;
+                        const metalValue = netWeight * rate;
+                        const makingCharge = (metalValue * makingChargesPercent / 100);
+                        
+                        // Calculate the subtotal (metalValue + makingCharges) which will be displayed as the Amount
+                        const itemSubtotal = metalValue + makingCharge;
+                        
+                        const purity = item.isCustomItem
+                          ? item.customProductDetails?.purity || item._displayProduct?.purity || '-'
+                          : fullProductDetails?.purity || item.purity || '-';
+                        const category = item.isCustomItem
+                          ? item.customProductDetails?.category || ''
+                          : fullProductDetails?.category || '';
+                        const isPurity22K = purity === '22K';
+                        const isGoldItem = category.includes('Gold');
+                        
+                        // Get correct HUID from product
+                        const huid = item.isCustomItem 
+                          ? (item.customProductDetails?.huid || '-')
+                          : (fullProductDetails?.huidNumber || '-');
+                        
+                        // Set HSN code based on purity and category
+                        const hsnCode = (isPurity22K && isGoldItem) ? '7113' : '';
+                        
+                        return (
+                          <TableRow key={index}>
+                            <TableCell>{index + 1}</TableCell>
+                            <TableCell>
+                              {item.isCustomItem 
+                                ? item.customProductDetails.name
+                                : fullProductDetails?.name || 'Product Not Found'}
+                              <Typography variant="caption" display="block" color="text.secondary">
+                                {category || '-'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>{purity}</TableCell>
+                            <TableCell>{huid}</TableCell>
+                            <TableCell>{hsnCode || '-'}</TableCell>
+                            <TableCell align="right">{item.quantity}</TableCell>
+                            <TableCell align="right">{`${grossWeight} ${weightType}`}</TableCell>
+                            <TableCell align="right">{`${netWeight} ${weightType}`}</TableCell>
+                            <TableCell align="right">{formatCurrency(rate)}</TableCell>
+                            <TableCell align="right">{formatCurrency(makingCharge)}</TableCell>
+                            <TableCell align="right">{formatCurrency(itemSubtotal)}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Grid>
+            </Grid>
+          </Paper>
         </Grid>
-      </Box>
+      </Grid>
 
       {/* Edit Sale Form */}
       {openEditForm && (
@@ -681,69 +772,7 @@ const SaleDetail = () => {
         }} 
         directPrint={isPrintMode}
         generatePdf={isPdfMode}
-        billData={sale ? {
-          invoiceNumber: sale.invoiceNumber,
-          date: sale.createdAt,
-          customer: sale.customer,
-          discount: sale.discount,
-          items: sale.items.map(item => {
-            // Get the complete product details if available
-            const fullProductDetails = item.isCustomItem ? null : 
-              (productDetails[item.product?._id] || item.product);
-              
-            // Calculate making charges in rupees
-            const netWeight = item.isCustomItem
-              ? item.customProductDetails?.netWeight || 0
-              : fullProductDetails?.netWeight || item.weight || 0;
-            
-            const makingChargesPercent = item.isCustomItem
-              ? (item.customProductDetails?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0)
-              : (fullProductDetails?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0);
-            
-            const rate = item.rate || 0;
-            const metalValue = netWeight * rate;
-            const makingCharge = (metalValue * makingChargesPercent / 100);
-            
-            const purity = item.isCustomItem
-              ? item.customProductDetails?.purity || item._displayProduct?.purity || '-'
-              : fullProductDetails?.purity || item.purity || '-';
-            const category = item.isCustomItem
-              ? item.customProductDetails?.category || ''
-              : fullProductDetails?.category || '';
-            const isPurity22K = purity === '22K';
-            const isGoldItem = category.includes('Gold');
-            const hsnCode = (isPurity22K && isGoldItem) ? '7113' : '';
-            
-            // Get correct HUID value
-            const huid = item.isCustomItem 
-              ? (item.customProductDetails?.huid || '')
-              : (fullProductDetails?.huidNumber || '');
-            
-            return {
-              description: item.isCustomItem 
-                ? item.customProductDetails.name 
-                : fullProductDetails?.name || 'Product',
-              category: category,
-              purity: purity,
-              grossWeight: item.isCustomItem
-                ? item.customProductDetails?.grossWeight || item.weight
-                : fullProductDetails?.grossWeight || item.weight,
-              netWeight: netWeight,
-              weight: netWeight,
-              rate: rate,
-              makingCharge: makingCharge,
-              total: metalValue + makingCharge,
-              hsnCode: hsnCode,
-              huid: huid
-            };
-          }),
-          subTotal: sale.subTotal,
-          taxRate: sale.tax,
-          tax: (sale.subTotal * sale.tax / 100),
-          total: sale.total,
-          paymentMethod: sale.paymentMethod,
-          amountInWords: convertToWords(sale.total)
-        } : null}
+        billData={billData}
       />
     </>
   );

@@ -89,8 +89,9 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
             <TableHead>
               <TableRow>
                 <TableCell align="center" width="4%">Sr.</TableCell>
-                <TableCell width="46%">Particulars</TableCell>
+                <TableCell width="36%">Particulars</TableCell>
                 <TableCell align="center" width="14%">Weight</TableCell>
+                <TableCell align="center" width="10%">Purity</TableCell>
                 <TableCell align="right" width="15%">Rate</TableCell>
                 <TableCell align="right" width="15%">Amount</TableCell>
               </TableRow>
@@ -131,6 +132,29 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
                     <TableCell align="center">
                       {item.weight ? `${parseFloat(item.weight).toFixed(3)}g` : '-'}
                     </TableCell>
+                    <TableCell align="center">
+                      {(() => {
+                        if (!item.purity) return '-';
+                        
+                        // If purity is a string that includes 'k' or 'kt', display as is
+                        if (typeof item.purity === 'string' && /k|kt|karat|carat/i.test(item.purity)) {
+                          return item.purity.toUpperCase();
+                        }
+                        
+                        // If purity is a number or can be parsed as a number
+                        const purityValue = parseFloat(item.purity);
+                        if (!isNaN(purityValue)) {
+                          // If it's likely a karat value (between 1-24)
+                          if (purityValue <= 24 && purityValue >= 1) {
+                            return `${purityValue}K`;
+                          }
+                          // Otherwise treat as percentage
+                          return `${purityValue.toFixed(2)}%`;
+                        }
+                        
+                        return item.purity;
+                      })()}
+                    </TableCell>
                     <TableCell align="right">{rate > 0 ? `₹${rate.toLocaleString()}` : '-'}</TableCell>
                     <TableCell align="right">{totalAmount > 0 ? `₹${totalAmount.toLocaleString()}` : '-'}</TableCell>
                   </TableRow>
@@ -141,6 +165,7 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
               {Array.from({ length: Math.max(0, 5 - (purchaseData?.items?.length || 0)) }).map((_, index) => (
                 <TableRow key={`empty-${index}`}>
                   <TableCell style={{ height: '18px' }}></TableCell>
+                  <TableCell></TableCell>
                   <TableCell></TableCell>
                   <TableCell></TableCell>
                   <TableCell></TableCell>
@@ -261,8 +286,9 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
           <thead>
             <tr>
               <th style="width: 4%;">Sr.</th>
-              <th style="width: 46%;">Particulars</th>
+              <th style="width: 36%;">Particulars</th>
               <th style="width: 14%;" class="text-center">Weight</th>
+              <th style="width: 10%;" class="text-center">Purity</th>
               <th style="width: 15%;" class="text-right">Rate</th>
               <th style="width: 15%;" class="text-right">Amount</th>
             </tr>
@@ -280,6 +306,27 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
                   item.description.replace(/\s*\(\d+(\.\d+)?\)\s*/i, '').replace(/\s*\d+(\.\d+)?(%|k|kt|karat|carat)\s*/i, '') : 
                   item.category ? item.category.replace(/\s*\(\d+(\.\d+)?\)\s*/i, '') : 'Jewellery'}</td>
                 <td class="text-center">${item.weight ? `${parseFloat(item.weight).toFixed(3)}g` : '-'}</td>
+                <td class="text-center">${(() => {
+                  if (!item.purity) return '-';
+                  
+                  // If purity is a string that includes 'k' or 'kt', display as is
+                  if (typeof item.purity === 'string' && /k|kt|karat|carat/i.test(item.purity)) {
+                    return item.purity.toUpperCase();
+                  }
+                  
+                  // If purity is a number or can be parsed as a number
+                  const purityValue = parseFloat(item.purity);
+                  if (!isNaN(purityValue)) {
+                    // If it's likely a karat value (between 1-24)
+                    if (purityValue <= 24 && purityValue >= 1) {
+                      return `${purityValue}K`;
+                    }
+                    // Otherwise treat as percentage
+                    return `${purityValue.toFixed(2)}%`;
+                  }
+                  
+                  return item.purity;
+                })()}</td>
                 <td class="text-right">₹${rate > 0 ? rate.toLocaleString() : '-'}</td>
                 <td class="text-right">₹${totalAmount > 0 ? totalAmount.toLocaleString() : '-'}</td>
               </tr>`;
@@ -288,7 +335,7 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
             ${Array.from({ length: Math.max(0, 5 - (purchaseData?.items?.length || 0)) }).map(() => 
               `<tr>
                 <td style="height: 18px;"></td>
-                <td></td><td></td><td></td><td></td>
+                <td></td><td></td><td></td><td></td><td></td>
               </tr>`
             ).join('')}
           </tbody>

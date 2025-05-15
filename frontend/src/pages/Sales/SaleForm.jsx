@@ -49,6 +49,7 @@ import {
   LocationCity as LocationIcon,
   Home as HomeIcon,
   Map as MapIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import api from '../../services/api';
@@ -88,6 +89,7 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
     name: '',
     phone: '',
     email: '',
+    gstin: '',
     idType: 'Aadhar',
     idNumber: '',
     dob: null,
@@ -855,10 +857,14 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
 
   // Handle open new customer dialog
   const handleOpenNewCustomerDialog = () => {
+    setOpenNewCustomerDialog(true);
+    
+    // Reset form
     setNewCustomer({
       name: '',
       phone: '',
       email: '',
+      gstin: '',
       idType: 'Aadhar',
       idNumber: '',
       dob: null,
@@ -869,7 +875,6 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
         pincode: '',
       }
     });
-    setOpenNewCustomerDialog(true);
   };
 
   // Handle close new customer dialog
@@ -927,6 +932,7 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
         name: newCustomer.name,
         phone: newCustomer.phone,
         email: newCustomer.email,
+        gstin: newCustomer.gstin,
         idType: newCustomer.idType,
         idNumber: newCustomer.idNumber,
         dob: newCustomer.dob ? newCustomer.dob.toISOString() : null,
@@ -1757,22 +1763,23 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>Add New Customer</DialogTitle>
+        <DialogTitle>
+          Add New Customer
+          <IconButton
+            aria-label="close"
+            onClick={handleCloseNewCustomerDialog}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            {/* Personal Information */}
-            <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom>
-                Personal Information
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            {/* Basic Info */}
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                required
-                label="Full Name"
+                label="Name"
                 name="name"
                 value={newCustomer.name}
                 onChange={handleNewCustomerChange}
@@ -1783,14 +1790,13 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
                     </InputAdornment>
                   ),
                 }}
+                required
               />
             </Grid>
-            
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                required
-                label="Phone Number"
+                label="Phone"
                 name="phone"
                 value={newCustomer.phone}
                 onChange={handleNewCustomerChange}
@@ -1801,13 +1807,13 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
                     </InputAdornment>
                   ),
                 }}
+                required
               />
             </Grid>
-            
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Email Address"
+                label="Email"
                 name="email"
                 type="email"
                 value={newCustomer.email}
@@ -1821,7 +1827,25 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
                 }}
               />
             </Grid>
-            
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="GSTIN"
+                name="gstin"
+                value={newCustomer.gstin}
+                onChange={handleNewCustomerChange}
+                inputProps={{ maxLength: 15 }}
+                helperText="Enter 15-digit GSTIN (if applicable)"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <ReceiptIcon />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            {/* Rest of the form remains the same */}
             <Grid item xs={12} sm={6}>
               <DatePicker
                 label="Date of Birth"

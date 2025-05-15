@@ -112,9 +112,26 @@ console.log(billData);
           </div>
         </div>
         
+        <!-- Bill Type -->
+        <div style="text-align: center; margin: 10px 0;">
+          <span style="font-weight: bold; padding: 4px 12px; font-size: 12pt; 
+          ${(billData?.taxRate > 0 || billData?.tax > 0) ? 
+            'color: #1a56db; background-color: #ebf5ff; border: 1px solid #bfdbfe;' : 
+            'color: #047857; background-color: #ecfdf5; border: 1px solid #a7f3d0;'}
+          border-radius: 4px;">
+            ${(billData?.taxRate > 0 || billData?.tax > 0) ? 'GST INVOICE' : 'RETAIL INVOICE'}
+            ${billData?.serialNumber ? 
+              `<span style="margin-left: 8px; font-size: 10pt;">${(billData?.taxRate > 0 || billData?.tax > 0) ? 
+                'GST-' + (Number(billData.serialNumber) + 54) : 
+                'REG-' + Number(billData.serialNumber)}</span>` : 
+              ''}
+          </span>
+        </div>
+        
         <!-- Customer Info -->
         <div class="customer-info">
           <span class="bold">Customer:</span> ${billData?.customer?.name || 'Customer Name'}${billData?.customer?.phone ? `, Ph: ${billData.customer.phone}` : ''}
+          ${billData?.customer?.gstin ? `<div style="margin-top: 4px;"><span class="bold">Customer GSTIN:</span> ${billData.customer.gstin}</div>` : ''}
         </div>
         
         <!-- Items Table -->
@@ -230,8 +247,9 @@ console.log(billData);
         </div>
         
         ${taxRate > 0 ? `
-        <div style="margin-top: 10px; text-align: center; width: 100%; font-weight: bold;">
-          GSTIN: 27DGJPP9641E1ZZ
+        <!-- GSTIN Info at Bottom -->
+        <div class="gstin-info" style="text-align: center; font-weight: bold; margin-top: 20px;">
+          GSTIN: 27DGJPP9641E1ZZ ${billData?.customer?.gstin ? `| Customer GSTIN: ${billData.customer.gstin}` : ''}
         </div>
         ` : ''}
       </div>
