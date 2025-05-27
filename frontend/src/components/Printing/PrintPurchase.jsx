@@ -10,8 +10,8 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
   return (
     <Box 
       sx={{
-        width: '209.55mm',
-        height: '158.75mm',
+        width: '210mm',
+        height: '158mm',
         position: 'relative',
         backgroundColor: '#fff',
         color: '#000',
@@ -21,59 +21,59 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
         }
       }}
     >
-      {/* Content Area (starts after 39mm from top) */}
+      {/* Content Area (starts after 38mm from top) */}
       <Box 
         sx={{
           position: 'absolute',
-          top: '39mm',
+          top: '38mm',
           width: '100%',
           height: '100mm',
           padding: '3mm 5mm',
           boxSizing: 'border-box',
           fontFamily: 'Arial, sans-serif',
-          fontSize: '10pt',
+          fontSize: '8pt',
           backgroundColor: 'white',
           color: '#000'
         }}
       >
         {/* Purchase Header - Invoice Number and Date */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
           <Box>
-            <Typography variant="body2" component="span" sx={{ fontSize: '10pt', fontWeight: 'bold', color: '#000' }}>
+            <Typography variant="body2" component="span" sx={{ fontSize: '9pt', fontWeight: 'bold', color: '#000' }}>
               Purchase No:
             </Typography>{' '}
-            <Typography variant="body2" component="span" sx={{ fontSize: '10pt', color: '#000' }}>
+            <Typography variant="body2" component="span" sx={{ fontSize: '9pt', color: '#000' }}>
               {purchaseData?.invoiceNumber || 'PUR-XXXXXX'}
             </Typography>
           </Box>
           <Box>
-            <Typography variant="body2" component="span" sx={{ fontSize: '10pt', fontWeight: 'bold', color: '#000' }}>
+            <Typography variant="body2" component="span" sx={{ fontSize: '9pt', fontWeight: 'bold', color: '#000' }}>
               Date:
             </Typography>{' '}
-            <Typography variant="body2" component="span" sx={{ fontSize: '10pt', color: '#000' }}>
+            <Typography variant="body2" component="span" sx={{ fontSize: '9pt', color: '#000' }}>
               {purchaseData?.date ? new Date(purchaseData.date).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')}
             </Typography>
           </Box>
         </Box>
 
         {/* Vendor Information */}
-        <Box sx={{ mb: 1.5 }}>
-          <Typography variant="body2" component="span" sx={{ fontSize: '10pt', fontWeight: 'bold', color: '#000' }}>
+        <Box sx={{ mb: 1 }}>
+          <Typography variant="body2" component="span" sx={{ fontSize: '9pt', fontWeight: 'bold', color: '#000' }}>
             Vendor:
           </Typography>{' '}
-          <Typography variant="body2" component="span" sx={{ fontSize: '10pt', color: '#000' }}>
+          <Typography variant="body2" component="span" sx={{ fontSize: '9pt', color: '#000' }}>
             {purchaseData?.vendor?.name || 'Vendor Name'},
             {purchaseData?.vendor?.phone ? ` Ph: ${purchaseData.vendor.phone}` : ''}
           </Typography>
         </Box>
 
         {/* Items Table - Compact styling for proper fit */}
-        <TableContainer component={Paper} sx={{ mb: 1.5, boxShadow: 'none', border: 'none', backgroundColor: 'white' }}>
+        <TableContainer component={Paper} sx={{ mb: 1, boxShadow: 'none', border: 'none', backgroundColor: 'white' }}>
           <Table size="small" sx={{ 
             backgroundColor: 'white',
             '& .MuiTableCell-root': { 
-              padding: '2px 4px',
-              fontSize: '9pt',
+              padding: '1px 2px',
+              fontSize: '8pt',
               border: '1px solid #ddd',
               backgroundColor: 'white',
               color: '#000',
@@ -88,12 +88,12 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
           }}>
             <TableHead>
               <TableRow>
-                <TableCell align="center" width="4%">Sr.</TableCell>
-                <TableCell width="36%">Particulars</TableCell>
-                <TableCell align="center" width="14%">Weight</TableCell>
-                <TableCell align="center" width="10%">Purity</TableCell>
-                <TableCell align="right" width="15%">Rate</TableCell>
-                <TableCell align="right" width="15%">Amount</TableCell>
+                <TableCell align="center" width="3%">Sr.</TableCell>
+                <TableCell width="38%">Particulars</TableCell>
+                <TableCell align="center" width="12%">Weight</TableCell>
+                <TableCell align="center" width="9%">Purity</TableCell>
+                <TableCell align="right" width="14%">Rate</TableCell>
+                <TableCell align="right" width="14%">Amount</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -200,11 +200,11 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
           return (
             <>
               {/* Total Calculation - No GST for purchases */}
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                <Box sx={{ width: '40%', border: '1px solid #ddd', backgroundColor: 'white' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
+                <Box sx={{ width: '33%', border: '1px solid #ddd', backgroundColor: 'white' }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, py: 0.5, backgroundColor: 'white' }}>
-                    <Typography variant="body2" sx={{ fontSize: '9pt', fontWeight: 'bold', color: '#000' }}>Total Amount:</Typography>
-                    <Typography variant="body2" sx={{ fontSize: '9pt', fontWeight: 'bold', color: '#000' }}>
+                    <Typography variant="body2" sx={{ fontSize: '8pt', fontWeight: 'bold', color: '#000' }}>Total Amount:</Typography>
+                    <Typography variant="body2" sx={{ fontSize: '8pt', fontWeight: 'bold', color: '#000' }}>
                       ₹{totalAmount.toLocaleString()}
                     </Typography>
                   </Box>
@@ -212,12 +212,10 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
               </Box>
 
               {/* Additional Information */}
-              <Box sx={{ fontSize: '9pt', mt: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-                  <Typography variant="body2" sx={{ fontSize: '9pt', color: '#000' }}>
-                    Payment Mode: {purchaseData?.paymentMethod || 'Cash'}
-                  </Typography>
-                </Box>
+              <Box sx={{ fontSize: '8pt', mt: 0.5, display: 'flex', justifyContent: 'flex-end' }}>
+                <Typography variant="body2" sx={{ fontSize: '8pt', color: '#000' }}>
+                  Payment Mode: {purchaseData?.paymentMethod || 'Cash'}
+                </Typography>
               </Box>
             </>
           );
@@ -285,12 +283,12 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
         <table>
           <thead>
             <tr>
-              <th style="width: 4%;">Sr.</th>
-              <th style="width: 36%;">Particulars</th>
-              <th style="width: 14%;" class="text-center">Weight</th>
-              <th style="width: 10%;" class="text-center">Purity</th>
-              <th style="width: 15%;" class="text-right">Rate</th>
-              <th style="width: 15%;" class="text-right">Amount</th>
+              <th style="width: 3%;">Sr.</th>
+              <th style="width: 38%;">Particulars</th>
+              <th style="width: 12%;" class="text-center">Weight</th>
+              <th style="width: 9%;" class="text-center">Purity</th>
+              <th style="width: 14%;" class="text-right">Rate</th>
+              <th style="width: 14%;" class="text-right">Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -365,58 +363,58 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
             <title>Print Purchase</title>
             <style>
               @page {
-                size: 209.55mm 158.75mm;
+                size: 210mm 158mm;
                 margin: 0;
                 padding: 0;
               }
               body {
                 margin: 0;
                 padding: 0;
-                width: 209.55mm;
-                height: 158.75mm;
+                width: 210mm;
+                height: 158mm;
                 font-family: Arial, sans-serif;
               }
               * {
                 box-sizing: border-box;
               }
               .print-content {
-                width: 209.55mm;
-                height: 158.75mm;
+                width: 210mm;
+                height: 158mm;
                 position: relative;
                 background-color: #fff;
               }
               .content-area {
                 position: absolute;
-                top: 39mm;
+                top: 38mm;
                 width: 100%;
                 height: 100mm;
                 padding: 3mm 5mm;
                 box-sizing: border-box;
                 font-family: Arial, sans-serif;
-                font-size: 10pt;
+                font-size: 8pt;
                 background-color: white;
                 color: #000;
               }
               .header-row {
                 display: flex;
                 justify-content: space-between;
-                margin-bottom: 1.5em;
+                margin-bottom: 1em;
               }
               .bold {
                 font-weight: bold;
               }
               .vendor-info {
-                margin-bottom: 1.5em;
+                margin-bottom: 1em;
               }
               table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-bottom: 1.5em;
+                margin-bottom: 1em;
               }
               th, td {
                 border: 1px solid #ddd;
-                padding: 2px 4px;
-                font-size: 9pt;
+                padding: 1px 2px;
+                font-size: 8pt;
                 color: #000;
                 background-color: white;
               }
@@ -431,15 +429,16 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
                 text-align: right;
               }
               .totals-box {
-                width: 40%;
+                width: 33%;
                 margin-left: auto;
                 border: 1px solid #ddd;
               }
               .totals-row {
                 display: flex;
                 justify-content: space-between;
-                padding: 0.5em 1em;
+                padding: 2px 8px;
                 border-bottom: 1px solid #ddd;
+                font-size: 8pt;
               }
               .totals-row:last-child {
                 border-bottom: none;
@@ -447,7 +446,7 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
               .footer-info {
                 display: flex;
                 justify-content: space-between;
-                margin-top: 1em;
+                margin-top: 0.5em;
               }
             </style>
           </head>
@@ -470,28 +469,28 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
             <title>Print Purchase</title>
             <style>
               @page {
-                size: 209.55mm 158.75mm;
+                size: 210mm 158mm;
                 margin: 0;
                 padding: 0;
               }
               body {
                 margin: 0;
                 padding: 0;
-                width: 209.55mm;
-                height: 158.75mm;
+                width: 210mm;
+                height: 158mm;
                 font-family: Arial, sans-serif;
               }
               * {
                 box-sizing: border-box;
               }
               .print-content {
-                width: 209.55mm;
-                height: 158.75mm;
+                width: 210mm;
+                height: 158mm;
                 position: relative;
                 background-color: #fff;
               }
               .header {
-                height: 39mm;
+                height: 38mm;
                 width: 100%;
                 background-color: #9e2f50;
                 background-image: linear-gradient(to right, #9e2f50, #7e1e3d);
@@ -583,36 +582,36 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
               }
               .content-area {
                 position: absolute;
-                top: 39mm;
+                top: 38mm;
                 width: 100%;
                 height: 100mm;
                 padding: 3mm 5mm;
                 box-sizing: border-box;
                 font-family: Arial, sans-serif;
-                font-size: 10pt;
+                font-size: 8pt;
                 background-color: white;
                 color: #000;
               }
               .header-row {
                 display: flex;
                 justify-content: space-between;
-                margin-bottom: 1.5em;
+                margin-bottom: 1em;
               }
               .bold {
                 font-weight: bold;
               }
               .vendor-info {
-                margin-bottom: 1.5em;
+                margin-bottom: 1em;
               }
               table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-bottom: 1.5em;
+                margin-bottom: 1em;
               }
               th, td {
                 border: 1px solid #ddd;
-                padding: 2px 4px;
-                font-size: 9pt;
+                padding: 1px 2px;
+                font-size: 8pt;
                 color: #000;
                 background-color: white;
               }
@@ -627,15 +626,16 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
                 text-align: right;
               }
               .totals-box {
-                width: 40%;
+                width: 33%;
                 margin-left: auto;
                 border: 1px solid #ddd;
               }
               .totals-row {
                 display: flex;
                 justify-content: space-between;
-                padding: 0.5em 1em;
+                padding: 2px 8px;
                 border-bottom: 1px solid #ddd;
+                font-size: 8pt;
               }
               .totals-row:last-child {
                 border-bottom: none;
@@ -643,7 +643,7 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
               .footer-info {
                 display: flex;
                 justify-content: space-between;
-                margin-top: 1em;
+                margin-top: 0.5em;
               }
             </style>
           </head>
@@ -681,7 +681,7 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
                   <p class="english">Vendor Signature</p>
                 </div>
                 <div class="certified">
-                  <p style="margin: 0; font-size: 9pt;">Certified that the particulars given above are true and correct</p>
+                  <p style="margin: 0; font-size: 8pt;">Certified that the particulars given above are true and correct</p>
                 </div>
                 <div class="company-sign">
                   <p class="marathi">एम. जी. पोतदार कंपनी</p>
@@ -761,8 +761,8 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
       container.style.position = 'fixed';
       container.style.left = '0';
       container.style.top = '0';
-      container.style.width = '209.55mm';
-      container.style.height = '158.75mm';
+      container.style.width = '210mm';
+      container.style.height = '158mm';
       container.style.zIndex = '-9999';
       container.style.visibility = 'hidden';
       document.body.appendChild(container);
@@ -803,10 +803,10 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
             const pdf = new jsPDF({
               orientation: 'landscape',
               unit: 'mm',
-              format: [158.75, 209.55] // Height, Width
+              format: [210, 158] // Width, Height - corrected orientation
             });
             
-            pdf.addImage(imgData, 'PNG', 0, 0, 209.55, 158.75);
+            pdf.addImage(imgData, 'PNG', 0, 0, 210, 158);
             pdf.save(`Purchase_${purchaseData?.invoiceNumber || 'New'}.pdf`);
             
             // Cleanup
@@ -885,8 +885,8 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
           <div 
             ref={printRef}
             style={{ 
-              width: '209.55mm', 
-              height: '158.75mm', 
+              width: '210mm', 
+              height: '158mm', 
               border: '1px dashed #ccc', 
               position: 'relative',
               backgroundColor: '#f9f9f9'
@@ -894,7 +894,7 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
           >
             {/* Top preprinted header area (burgundy in the image) */}
             <div style={{ 
-              height: '39mm', 
+              height: '38mm', 
               width: '100%', 
               backgroundColor: '#9e2f50', 
               backgroundImage: 'linear-gradient(to right, #9e2f50, #7e1e3d)',

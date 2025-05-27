@@ -79,9 +79,9 @@ const BillPrintTemplate = ({ billData }) => {
   };
 
   return (
-    <div className="relative w-[209.55mm] h-[158.75mm] bg-white text-black">
-      {/* Content Area (starts after 39mm from top) */}
-      <div className="absolute top-[39mm] w-full h-[100mm] p-[3mm] box-border font-sans text-[10pt]">
+    <div className="relative w-[210mm] h-[158mm] bg-white text-black">
+      {/* Content Area (starts after 38mm from top) */}
+      <div className="absolute top-[38mm] w-full h-[100mm] p-[3mm] box-border font-sans text-[9pt]">
         {/* Bill Header - Invoice Number and Date */}
         <div className="flex justify-between mb-4">
           <div>
@@ -126,21 +126,21 @@ const BillPrintTemplate = ({ billData }) => {
         </div>
 
         {/* Items Table */}
-        <div className="mb-4 bg-white">
-          <table className="w-full border-collapse bg-white text-[9pt]">
+        <div className="mb-2 bg-white">
+          <table className="w-full border-collapse bg-white text-[8pt]">
             <thead>
               <tr>
-                <th className="border border-gray-300 p-1 text-center w-[4%] font-bold bg-white">Sr.</th>
-                <th className="border border-gray-300 p-1 w-[18%] font-bold bg-white">Particulars</th>
-                <th className="border border-gray-300 p-1 text-center w-[8%] font-bold bg-white">Purity</th>
-                <th className="border border-gray-300 p-1 text-center w-[8%] font-bold bg-white">HUID</th>
-                <th className="border border-gray-300 p-1 text-center w-[6%] font-bold bg-white">HSN</th>
-                <th className="border border-gray-300 p-1 text-center w-[4%] font-bold bg-white">PCS</th>
-                <th className="border border-gray-300 p-1 text-center w-[8%] font-bold bg-white">Gross Wt.</th>
-                <th className="border border-gray-300 p-1 text-center w-[8%] font-bold bg-white">Net Wt.</th>
-                <th className="border border-gray-300 p-1 text-right w-[10%] font-bold bg-white">Rate</th>
-                <th className="border border-gray-300 p-1 text-right w-[10%] font-bold bg-white">Making</th>
-                <th className="border border-gray-300 p-1 text-right w-[12%] font-bold bg-white">Amount</th>
+                <th className="border border-gray-300 p-[2px] text-center w-[3%] font-bold bg-white">Sr.</th>
+                <th className="border border-gray-300 p-[2px] w-[20%] font-bold bg-white">Particulars</th>
+                <th className="border border-gray-300 p-[2px] text-center w-[6%] font-bold bg-white">Purity</th>
+                <th className="border border-gray-300 p-[2px] text-center w-[6%] font-bold bg-white">HUID</th>
+                <th className="border border-gray-300 p-[2px] text-center w-[5%] font-bold bg-white">HSN</th>
+                <th className="border border-gray-300 p-[2px] text-center w-[3%] font-bold bg-white">PCS</th>
+                <th className="border border-gray-300 p-[2px] text-center w-[7%] font-bold bg-white">Gross Wt.</th>
+                <th className="border border-gray-300 p-[2px] text-center w-[7%] font-bold bg-white">Net Wt.</th>
+                <th className="border border-gray-300 p-[2px] text-right w-[9%] font-bold bg-white">Rate</th>
+                <th className="border border-gray-300 p-[2px] text-right w-[9%] font-bold bg-white">Making</th>
+                <th className="border border-gray-300 p-[2px] text-right w-[10%] font-bold bg-white">Amount</th>
               </tr>
             </thead>
             <tbody>
@@ -151,29 +151,29 @@ const BillPrintTemplate = ({ billData }) => {
                 
                 return (
                   <tr key={index}>
-                    <td className="border border-gray-300 p-1 text-center">{index + 1}</td>
-                    <td className="border border-gray-300 p-1 break-words">
+                    <td className="border border-gray-300 p-[2px] text-center">{index + 1}</td>
+                    <td className="border border-gray-300 p-[2px] break-words">
                       {item.description || item.category || 'Jewellery'}
                     </td>
-                    <td className="border border-gray-300 p-1 text-center">
+                    <td className="border border-gray-300 p-[2px] text-center">
                       {item.purity || '-'}
                     </td>
-                    <td className="border border-gray-300 p-1 text-center">
+                    <td className="border border-gray-300 p-[2px] text-center">
                       {item.huid || (item.product?.huidNumber) || '-'}
                     </td>
-                    <td className="border border-gray-300 p-1 text-center">
+                    <td className="border border-gray-300 p-[2px] text-center">
                       {getHSNCode(item)}
                     </td>
-                    <td className="border border-gray-300 p-1 text-center">{item.quantity || 1}</td>
-                    <td className="border border-gray-300 p-1 text-center">
+                    <td className="border border-gray-300 p-[2px] text-center">{item.quantity || 1}</td>
+                    <td className="border border-gray-300 p-[2px] text-center">
                       {item.grossWeight ? `${parseFloat(item.grossWeight).toFixed(3)}g` : '-'}
                     </td>
-                    <td className="border border-gray-300 p-1 text-center">
+                    <td className="border border-gray-300 p-[2px] text-center">
                       {item.netWeight ? `${parseFloat(item.netWeight).toFixed(3)}g` : '-'}
                     </td>
-                    <td className="border border-gray-300 p-1 text-right">₹{item.rate?.toLocaleString() || '-'}</td>
-                    <td className="border border-gray-300 p-1 text-right">₹{makingCharge?.toLocaleString() || '-'}</td>
-                    <td className="border border-gray-300 p-1 text-right">₹{totalAmount.toLocaleString()}</td>
+                    <td className="border border-gray-300 p-[2px] text-right">₹{item.rate?.toLocaleString() || '-'}</td>
+                    <td className="border border-gray-300 p-[2px] text-right">₹{makingCharge?.toLocaleString() || '-'}</td>
+                    <td className="border border-gray-300 p-[2px] text-right">₹{totalAmount.toLocaleString()}</td>
                   </tr>
                 );
               })}
@@ -181,7 +181,7 @@ const BillPrintTemplate = ({ billData }) => {
               {/* Add empty rows to maintain table size */}
               {Array.from({ length: Math.max(0, 5 - (billData?.items?.length || 0)) }).map((_, index) => (
                 <tr key={`empty-${index}`}>
-                  <td className="border border-gray-300 h-4"></td>
+                  <td className="border border-gray-300 h-3"></td>
                   <td className="border border-gray-300"></td>
                   <td className="border border-gray-300"></td>
                   <td className="border border-gray-300"></td>
@@ -230,79 +230,68 @@ const BillPrintTemplate = ({ billData }) => {
           return (
             <>
               {/* Total Calculation */}
-              <div className="flex justify-end mb-4">
-                <div className="w-2/5 border border-gray-300 bg-white">
-                  <div className="flex justify-between px-4 py-1 border-b border-gray-300 bg-white">
-                    <span className="text-[9pt]">Sub Total:</span>
-                    <span className="text-[9pt]">₹{calculatedSubTotal.toLocaleString()}</span>
+              <div className="flex justify-end mb-1">
+                <div className="w-1/3 border border-gray-300 bg-white">
+                  <div className="flex justify-between px-2 py-[2px] border-b border-gray-300 bg-white">
+                    <span className="text-[8pt]">Sub Total:</span>
+                    <span className="text-[8pt]">₹{calculatedSubTotal.toLocaleString()}</span>
                   </div>
                   {discountAmount > 0 && (
                     <>
-                      <div className="flex justify-between px-4 py-1 border-b border-gray-300 bg-white">
-                        <span className="text-[9pt]">Discount:</span>
-                        <span className="text-[9pt]">-₹{discountAmount.toLocaleString()}</span>
+                      <div className="flex justify-between px-2 py-[2px] border-b border-gray-300 bg-white">
+                        <span className="text-[8pt]">Discount:</span>
+                        <span className="text-[8pt]">-₹{discountAmount.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between px-4 py-1 border-b border-gray-300 bg-white">
-                        <span className="text-[9pt]">Net Amount:</span>
-                        <span className="text-[9pt]">₹{discountedSubTotal.toLocaleString()}</span>
+                      <div className="flex justify-between px-2 py-[2px] border-b border-gray-300 bg-white">
+                        <span className="text-[8pt]">Net Amount:</span>
+                        <span className="text-[8pt]">₹{discountedSubTotal.toLocaleString()}</span>
                       </div>
                     </>
                   )}
                   {taxRate > 0 && (
                     <>
-                      <div className="flex justify-between px-4 py-1 border-b border-gray-300 bg-white">
-                        <span className="text-[9pt]">CGST ({taxRate/2}%):</span>
-                        <span className="text-[9pt]">₹{(calculatedTax/2).toLocaleString()}</span>
+                      <div className="flex justify-between px-2 py-[2px] border-b border-gray-300 bg-white">
+                        <span className="text-[8pt]">CGST ({taxRate/2}%):</span>
+                        <span className="text-[8pt]">₹{(calculatedTax/2).toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between px-4 py-1 border-b border-gray-300 bg-white">
-                        <span className="text-[9pt]">SGST ({taxRate/2}%):</span>
-                        <span className="text-[9pt]">₹{(calculatedTax/2).toLocaleString()}</span>
+                      <div className="flex justify-between px-2 py-[2px] border-b border-gray-300 bg-white">
+                        <span className="text-[8pt]">SGST ({taxRate/2}%):</span>
+                        <span className="text-[8pt]">₹{(calculatedTax/2).toLocaleString()}</span>
                       </div>
                     </>
                   )}
-                  <div className="flex justify-between px-4 py-1 bg-white">
-                    <span className="text-[9pt] font-bold">Grand Total:</span>
-                    <span className="text-[9pt] font-bold">₹{finalGrandTotal.toLocaleString()}</span>
+                  <div className="flex justify-between px-2 py-[2px] bg-white">
+                    <span className="text-[8pt] font-bold">Grand Total:</span>
+                    <span className="text-[8pt] font-bold">₹{finalGrandTotal.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Additional Information */}
-              <div className="text-[9pt] mt-4">
-                <p className="text-[9pt] italic">
-                  Amount in words: {amountInWords}
-                </p>
-                <div className="flex justify-between mt-4">
-                  <p className="text-[9pt]">
+              {/* Additional Information - Compact version */}
+              <div className="flex justify-between text-[8pt] mt-1">
+                <div className="w-3/5">
+                  <p className="text-[8pt] italic mb-1">
+                    Amount in words: {amountInWords}
+                  </p>
+                </div>
+                <div className="w-2/5 text-right">
+                  <p className="text-[8pt] mb-1">
                     Payment Mode: {billData?.paymentMethod || 'Cash'}
                   </p>
                 </div>
               </div>
+
+              {/* GSTIN in the content area instead of bottom strip */}
+              {taxRate > 0 && (
+                <div className="text-center text-[8pt] font-bold mt-1">
+                  GSTIN: 27DGJPP9641E1ZZ
+                  {billData?.customer?.gstin && ` | Customer GSTIN: ${billData.customer.gstin}`}
+                </div>
+              )}
             </>
           );
         })()}
       </div>
-      
-      {/* GSTIN in bottom strip */}
-      {(() => {
-        // Calculate tax rate to determine if GSTIN should be shown
-        const taxRate = billData?.taxRate || 0;
-        console.log(billData);
-        // Only show GSTIN if tax rate is greater than 0
-        if (taxRate > 0) {
-          return (
-            <div className="absolute bottom-[10mm] w-full text-center text-[10pt] font-bold">
-              <p className="text-[10pt]">
-                GSTIN: 27DGJPP9641E1ZZ
-                {billData?.customer?.gstin && ` | Customer GSTIN: ${billData.customer.gstin}`}
-              </p>
-            </div>
-          );
-        }
-        
-        // Return null if tax rate is 0
-        return null;
-      })()}
     </div>
   );
 };

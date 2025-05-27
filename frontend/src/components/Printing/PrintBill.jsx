@@ -138,17 +138,17 @@ console.log(billData);
         <table>
           <thead>
             <tr>
-              <th style="width: 4%;">Sr.</th>
-              <th style="width: 18%;">Particulars</th>
-              <th style="width: 8%;">Purity</th>
-              <th style="width: 8%;">HUID</th>
-              <th style="width: 6%;">HSN</th>
-              <th style="width: 4%;">PCS</th>
-              <th style="width: 8%;">Gross Wt.</th>
-              <th style="width: 8%;">Net Wt.</th>
-              <th style="width: 10%;" class="text-right">Rate</th>
-              <th style="width: 10%;" class="text-right">Making</th>
-              <th style="width: 12%;" class="text-right">Amount</th>
+              <th style="width: 3%;">Sr.</th>
+              <th style="width: 20%;">Particulars</th>
+              <th style="width: 6%;">Purity</th>
+              <th style="width: 6%;">HUID</th>
+              <th style="width: 5%;">HSN</th>
+              <th style="width: 3%;">PCS</th>
+              <th style="width: 7%;">Gross Wt.</th>
+              <th style="width: 7%;">Net Wt.</th>
+              <th style="width: 9%;" class="text-right">Rate</th>
+              <th style="width: 9%;" class="text-right">Making</th>
+              <th style="width: 10%;" class="text-right">Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -238,17 +238,22 @@ console.log(billData);
           </div>
         </div>
         
-        <div class="amount-words">
-          Amount in words: ${billData?.amountInWords || convertToWords(finalGrandTotal)}
-        </div>
-        
-        <div class="footer-info">
-          <div>Payment Mode: ${billData?.paymentMethod || 'Cash'}</div>
+        <div style="display: flex; justify-content: space-between;">
+          <div style="width: 60%;">
+            <div class="amount-words">
+              Amount in words: ${billData?.amountInWords || convertToWords(finalGrandTotal)}
+            </div>
+          </div>
+          <div style="width: 40%; text-align: right;">
+            <div class="footer-info">
+              <div>Payment Mode: ${billData?.paymentMethod || 'Cash'}</div>
+            </div>
+          </div>
         </div>
         
         ${taxRate > 0 ? `
-        <!-- GSTIN Info at Bottom -->
-        <div class="gstin-info" style="text-align: center; font-weight: bold; margin-top: 20px;">
+        <!-- GSTIN Info -->
+        <div class="gstin-info">
           GSTIN: 27DGJPP9641E1ZZ ${billData?.customer?.gstin ? `| Customer GSTIN: ${billData.customer.gstin}` : ''}
         </div>
         ` : ''}
@@ -265,35 +270,36 @@ console.log(billData);
             <title>Print Bill</title>
             <style>
               @page {
-                size: 209.55mm 158.75mm;
+                size: 210mm 158mm;
                 margin: 0;
                 padding: 0;
               }
               body {
                 margin: 0;
                 padding: 0;
-                width: 209.55mm;
-                height: 158.75mm;
+                width: 210mm;
+                height: 158mm;
                 font-family: Arial, sans-serif;
               }
               * {
                 box-sizing: border-box;
               }
               .print-content {
-                width: 209.55mm;
-                height: 158.75mm;
+                width: 210mm;
+                height: 158mm;
                 position: relative;
                 background-color: #fff;
+                transform: none !important;
               }
               .content-area {
                 position: absolute;
-                top: 39mm;
+                top: 38mm;
                 width: 100%;
                 height: 100mm;
                 padding: 3mm 5mm;
                 box-sizing: border-box;
                 font-family: Arial, sans-serif;
-                font-size: 10pt;
+                font-size: 8pt;
                 background-color: white;
                 color: #000;
               }
@@ -311,12 +317,12 @@ console.log(billData);
               table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-bottom: 1.5em;
+                margin-bottom: 1em;
               }
               th, td {
                 border: 1px solid #ddd;
-                padding: 2px 4px;
-                font-size: 9pt;
+                padding: 2px;
+                font-size: 8pt;
                 color: #000;
                 background-color: white;
               }
@@ -331,28 +337,38 @@ console.log(billData);
                 text-align: right;
               }
               .totals-box {
-                width: 40%;
+                width: 33%;
                 margin-left: auto;
                 border: 1px solid #ddd;
               }
               .totals-row {
                 display: flex;
                 justify-content: space-between;
-                padding: 0.5em 1em;
+                padding: 2px 8px;
                 border-bottom: 1px solid #ddd;
+                font-size: 8pt;
               }
               .totals-row:last-child {
                 border-bottom: none;
               }
               .amount-words {
-                font-size: 9pt;
+                font-size: 8pt;
                 font-style: italic;
-                margin-top: 1em;
+                margin-top: 0.5em;
+                margin-bottom: 0.5em;
               }
               .footer-info {
                 display: flex;
                 justify-content: space-between;
-                margin-top: 1em;
+                margin-top: 0.5em;
+                font-size: 8pt;
+              }
+              
+              .gstin-info {
+                text-align: center;
+                font-weight: bold;
+                margin-top: 0.5em;
+                font-size: 8pt;
               }
             </style>
           </head>
@@ -389,28 +405,28 @@ console.log(billData);
             <title>Print Bill</title>
             <style>
               @page {
-                size: 209.55mm 158.75mm;
+                size: 210mm 158mm;
                 margin: 0;
                 padding: 0;
               }
               body {
                 margin: 0;
                 padding: 0;
-                width: 209.55mm;
-                height: 158.75mm;
+                width: 210mm;
+                height: 158mm;
                 font-family: Arial, sans-serif;
               }
               * {
                 box-sizing: border-box;
               }
               .print-content {
-                width: 209.55mm;
-                height: 158.75mm;
+                width: 210mm;
+                height: 158mm;
                 position: relative;
                 background-color: #fff;
               }
               .header {
-                height: 39mm;
+                height: 38mm;
                 width: 100%;
                 background-color: #9e2f50;
                 background-image: linear-gradient(to right, #9e2f50, #7e1e3d);
@@ -502,13 +518,13 @@ console.log(billData);
               }
               .content-area {
                 position: absolute;
-                top: 39mm;
+                top: 38mm;
                 width: 100%;
                 height: 100mm;
                 padding: 3mm 5mm;
                 box-sizing: border-box;
                 font-family: Arial, sans-serif;
-                font-size: 10pt;
+                font-size: 9pt;
                 background-color: white;
                 color: #000;
               }
@@ -526,12 +542,12 @@ console.log(billData);
               table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-bottom: 1.5em;
+                margin-bottom: 1em;
               }
               th, td {
                 border: 1px solid #ddd;
-                padding: 2px 4px;
-                font-size: 9pt;
+                padding: 2px;
+                font-size: 8pt;
                 color: #000;
                 background-color: white;
               }
@@ -546,28 +562,35 @@ console.log(billData);
                 text-align: right;
               }
               .totals-box {
-                width: 40%;
+                width: 33%;
                 margin-left: auto;
                 border: 1px solid #ddd;
               }
               .totals-row {
                 display: flex;
                 justify-content: space-between;
-                padding: 0.5em 1em;
+                padding: 2px 8px;
                 border-bottom: 1px solid #ddd;
+                font-size: 8pt;
               }
               .totals-row:last-child {
                 border-bottom: none;
               }
               .amount-words {
-                font-size: 9pt;
+                font-size: 8pt;
                 font-style: italic;
-                margin-top: 1em;
+                margin-top: 0.5em;
+                margin-bottom: 0.5em;
               }
               .footer-info {
-                display: flex;
-                justify-content: space-between;
-                margin-top: 1em;
+                font-size: 8pt;
+              }
+              
+              .gstin-info {
+                text-align: center;
+                font-weight: bold;
+                margin-top: 0.5em;
+                font-size: 8pt;
               }
             </style>
           </head>
@@ -720,8 +743,8 @@ console.log(billData);
       container.style.position = 'fixed';
       container.style.left = '0';
       container.style.top = '0';
-      container.style.width = '209.55mm';
-      container.style.height = '158.75mm';
+      container.style.width = '210mm';
+      container.style.height = '158mm';
       container.style.zIndex = '-9999';
       container.style.visibility = 'hidden';
       document.body.appendChild(container);
@@ -762,10 +785,9 @@ console.log(billData);
             const pdf = new jsPDF({
               orientation: 'landscape',
               unit: 'mm',
-              format: [158.75, 209.55] // Height, Width
+              format: [210, 158]
             });
-            
-            pdf.addImage(imgData, 'PNG', 0, 0, 209.55, 158.75);
+            pdf.addImage(imgData, 'PNG', 0, 0, 210, 158);
             pdf.save(`Bill_${billData?.invoiceNumber || 'New'}.pdf`);
             
             // Cleanup
@@ -824,8 +846,8 @@ console.log(billData);
           <div 
             ref={printRef}
             style={{ 
-              width: '209.55mm', 
-              height: '158.75mm', 
+              width: '210mm', 
+              height: '158mm', 
               border: '1px dashed #ccc', 
               position: 'relative',
               backgroundColor: '#f9f9f9'
@@ -833,7 +855,7 @@ console.log(billData);
           >
             {/* Top preprinted header area (burgundy in the image) */}
             <div style={{ 
-              height: '39mm', 
+              height: '38mm', 
               width: '100%', 
               backgroundColor: '#9e2f50', 
               backgroundImage: 'linear-gradient(to right, #9e2f50, #7e1e3d)',
