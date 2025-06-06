@@ -58,10 +58,10 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
 
         {/* Vendor Information */}
         <Box sx={{ mb: 1 }}>
-          <Typography variant="body2" component="span" sx={{ fontSize: '9pt', fontWeight: 'bold', color: '#000' }}>
-            Vendor:
+          <Typography variant="body2" component="span" sx={{ fontSize: '12pt', fontWeight: 'bold', color: '#000' }}>
+            Customer:
           </Typography>{' '}
-          <Typography variant="body2" component="span" sx={{ fontSize: '9pt', color: '#000' }}>
+          <Typography variant="body2" component="span" sx={{ fontSize: '12pt', color: '#000' }}>
             {purchaseData?.vendor?.name || 'Vendor Name'},
             {purchaseData?.vendor?.phone ? ` Ph: ${purchaseData.vendor.phone}` : ''}
           </Typography>
@@ -276,7 +276,7 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
         
         <!-- Vendor Info -->
         <div class="vendor-info">
-          <span class="bold">Vendor:</span> ${purchaseData?.vendor?.name || 'Vendor Name'}${purchaseData?.vendor?.phone ? `, Ph: ${purchaseData.vendor.phone}` : ''}
+          <span class="bold ">Customer:</span> ${purchaseData?.vendor?.name || 'Vendor Name'}${purchaseData?.vendor?.phone ? `, Ph: ${purchaseData.vendor.phone}` : ''}
         </div>
         
         <!-- Items Table -->
@@ -363,7 +363,7 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
             <title>Print Purchase</title>
             <style>
               @page {
-                size: 210mm 158mm;
+                size: 210mm 158mm landscape;
                 margin: 0;
                 padding: 0;
               }
@@ -405,6 +405,7 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
               }
               .vendor-info {
                 margin-bottom: 1em;
+                font-size: 12pt;
               }
               table {
                 width: 100%;
@@ -602,6 +603,7 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
               }
               .vendor-info {
                 margin-bottom: 1em;
+                font-size: 12pt;
               }
               table {
                 width: 100%;

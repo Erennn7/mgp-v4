@@ -313,6 +313,7 @@ console.log(billData);
               }
               .customer-info {
                 margin-bottom: 1.5em;
+                font-size: 12pt;
               }
               table {
                 width: 100%;
@@ -367,8 +368,8 @@ console.log(billData);
               .gstin-info {
                 text-align: center;
                 font-weight: bold;
-                margin-top: 6.0em;
-                font-size: 9pt; /* Increased font size */
+                margin-top: 3.0em;
+                font-size: 12pt; /* Increased font size */
               }
             </style>
           </head>
