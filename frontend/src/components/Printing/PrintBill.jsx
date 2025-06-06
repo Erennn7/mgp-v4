@@ -103,12 +103,12 @@ console.log(billData);
     const baseHtml = `
       <div class="content-area">
         <!-- Bill Header -->
-        <div class="header-row">
-          <div>
+        <div class="header-row ">
+          <div style="font-size: 16px;">
             <span class="bold">Bill No:</span> ${billData?.invoiceNumber || 'INV-XXXXXX'}
           </div>
-          <div>
-            <span class="bold">Date:</span> ${billData?.date ? new Date(billData.date).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')}
+          <div style="font-size: 16px;">
+            <span class="bold " >Date:</span> ${billData?.date ? new Date(billData.date).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')}
           </div>
         </div>
         
@@ -270,7 +270,7 @@ console.log(billData);
             <title>Print Bill</title>
             <style>
               @page {
-                size: 210mm 158mm;
+                size: 210mm 158mm landscape;
                 margin: 0;
                 padding: 0;
               }
@@ -367,32 +367,20 @@ console.log(billData);
               .gstin-info {
                 text-align: center;
                 font-weight: bold;
-                margin-top: 0.5em;
-                font-size: 8pt;
+                margin-top: 6.0em;
+                font-size: 9pt; /* Increased font size */
               }
             </style>
           </head>
           <body>
-            <div class="print-content">
-              ${baseHtml.replace(`<div class="totals-row">
-            <div>CGST (${taxRate/2}%):</div>
-            <div>₹${taxRate === 0 ? '0' : (calculatedTax/2).toLocaleString()}</div>
-          </div>
-          <div class="totals-row">
-            <div>SGST (${taxRate/2}%):</div>
-            <div>₹${taxRate === 0 ? '0' : (calculatedTax/2).toLocaleString()}</div>
-          </div>`, taxRate > 0 ? `<div class="totals-row">
-            <div>CGST (${taxRate/2}%):</div>
-            <div>₹${(calculatedTax/2).toLocaleString()}</div>
-          </div>
-          <div class="totals-row">
-            <div>SGST (${taxRate/2}%):</div>
-            <div>₹${(calculatedTax/2).toLocaleString()}</div>
-          </div>` : '')}
-            </div>
-          </body>
-        </html>
-      `;
+            <div class="print-content ">
+              ${baseHtml.replace( `<div >
+            <span class=
+"bold">Date:</span>
+          </div>`, `<div>
+            <span class="bold">Date:</span> ${billData?.date ? new Date(billData.date).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')}
+          </div>`)}
+              `;
     }
 
     // Generate independent HTML for PDF with pre-printed elements

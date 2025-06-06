@@ -67,6 +67,7 @@ const Products = () => {
   const [productTypes, setProductTypes] = useState(DEFAULT_PRODUCT_TYPES);
   const [sortedProductTypes, setSortedProductTypes] = useState(DEFAULT_PRODUCT_TYPES);
   const navigate = useNavigate();
+  const [totalNetWeight, setTotalNetWeight] = useState(0); // New state for total net weight
 
   // Fetch custom product types
   const fetchProductTypes = async () => {
@@ -142,6 +143,26 @@ const Products = () => {
       
       setProducts(productsWithRates);
       
+      // Calculate total net weight, accounting for stock quantity
+      const calculatedTotalNetWeight = productsWithRates.reduce((sum, product) => {
+        const netWeight = parseFloat(product.netWeight) || 0;
+        const stock = parseInt(product.stock) || 0; // Get stock quantity
+        const weightType = product.weightType || 'Gram';
+        
+        // Calculate total weight for this product (netWeight * stock)
+        const productTotalWeight = netWeight * stock;
+
+        // Convert all weights to grams for summation
+        if (weightType === 'Milligram') {
+          return sum + (productTotalWeight / 1000);
+        } else if (weightType === 'Carat') {
+          return sum + (productTotalWeight * 0.2);
+        } else {
+          return sum + productTotalWeight;
+        }
+      }, 0);
+      setTotalNetWeight(calculatedTotalNetWeight);
+
       // Count products by type
       const counts = { 'All': productsWithRates.length };
       productTypes.slice(1).forEach(type => {
@@ -403,7 +424,6 @@ const Products = () => {
         onActionClick={handleAddProduct}
       />
 
-      <Paper sx={{ mb: 3, p: 2, borderRadius: 2 }}>
         <Typography variant="h6" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
           <FilterIcon sx={{ mr: 1 }} /> Filter by Type
         </Typography>
@@ -522,60 +542,71 @@ const Products = () => {
             }}
           />
         </Box>
-      </Paper>
 
-      {/* Add/Edit Product Form */}
-      {openForm && (
-        <FormDialog
-          open={openForm}
-          onClose={() => {
-            setOpenForm(false);
-            // Refresh product types when the form is closed
-            fetchProductTypes();
-          }}
-          title={selectedProduct ? 'Edit Product' : 'Add New Product'}
-          onSubmit={handleFormSubmit}
-          loading={formSubmitting}
-          submitLabel={selectedProduct ? 'Update' : 'Save'}
-        >
-          <ProductForm
-            initialData={selectedProduct}
+        {/* New section for Total Inventory Weight */}
+        <Paper sx={{ mb: 3, p: 2, borderRadius: 2 }}>
+          <Typography variant="h6" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
+            <InventoryIcon sx={{ mr: 1 }} /> Total Inventory Weight
+          </Typography>
+          <Typography variant="h5" color="primary">
+            {totalNetWeight.toFixed(3)} grams
+          </Typography>
+        </Paper>
+
+
+
+        {/* Add/Edit Product Form */}
+        {openForm && (
+          <FormDialog
+            open={openForm}
+            onClose={() => {
+              setOpenForm(false);
+              // Refresh product types when the form is closed
+              fetchProductTypes();
+            }}
+            title={selectedProduct ? 'Edit Product' : 'Add New Product'}
+            onSubmit={handleFormSubmit}
             loading={formSubmitting}
-            onFormDataChange={handleFormDataChange}
-          />
-        </FormDialog>
-      )}
+            submitLabel={selectedProduct ? 'Update' : 'Save'}
+          >
+            <ProductForm
+              initialData={selectedProduct}
+              loading={formSubmitting}
+              onFormDataChange={handleFormDataChange}
+            />
+          </FormDialog>
+        )}
 
-      {/* Delete Confirmation Dialog */}
-      {confirmDelete && (
-        <FormDialog
-          open={!!confirmDelete}
-          onClose={() => setConfirmDelete(null)}
-          title="Delete Product"
-          subtitle="Are you sure you want to delete this product? This action cannot be undone."
-          onSubmit={confirmDeleteProduct}
-          loading={formSubmitting}
-          submitLabel="Delete"
-          maxWidth="xs"
-        >
-          <Box sx={{ py: 1 }}>
-            <strong>Name:</strong> {confirmDelete.name}
-            <br />
-            <strong>Category:</strong> {confirmDelete.category}
-            <br />
-            <strong>Net Wt/Gross Wt:</strong> {confirmDelete.netWeight || 0}
-            {confirmDelete.weightType === 'Gram' ? 'g' : 
-             confirmDelete.weightType === 'Milligram' ? 'mg' : 
-             confirmDelete.weightType === 'Carat' ? 'ct' : ''}
-            /{confirmDelete.grossWeight || 0}
-            {confirmDelete.weightType === 'Gram' ? 'g' : 
-             confirmDelete.weightType === 'Milligram' ? 'mg' : 
-             confirmDelete.weightType === 'Carat' ? 'ct' : ''}
-          </Box>
-        </FormDialog>
-      )}
-    </>
-  );
+        {/* Delete Confirmation Dialog */}
+        {confirmDelete && (
+          <FormDialog
+            open={!!confirmDelete}
+            onClose={() => setConfirmDelete(null)}
+            title="Delete Product"
+            subtitle="Are you sure you want to delete this product? This action cannot be undone."
+            onSubmit={confirmDeleteProduct}
+            loading={formSubmitting}
+            submitLabel="Delete"
+            maxWidth="xs"
+          >
+            <Box sx={{ py: 1 }}>
+              <strong>Name:</strong> {confirmDelete.name}
+              <br />
+              <strong>Category:</strong> {confirmDelete.category}
+              <br />
+              <strong>Net Wt/Gross Wt:</strong> {confirmDelete.netWeight || 0}
+              {confirmDelete.weightType === 'Gram' ? 'g' : 
+               confirmDelete.weightType === 'Milligram' ? 'mg' : 
+               confirmDelete.weightType === 'Carat' ? 'ct' : ''}
+              /{confirmDelete.grossWeight || 0}
+              {confirmDelete.weightType === 'Gram' ? 'g' : 
+               confirmDelete.weightType === 'Milligram' ? 'mg' : 
+               confirmDelete.weightType === 'Carat' ? 'ct' : ''}
+            </Box>
+          </FormDialog>
+        )}
+      </>
+    );
 };
 
-export default Products; 
+export default Products;

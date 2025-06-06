@@ -386,6 +386,15 @@ const SaleDetail = () => {
       const productId = item.product?._id;
       const productDetail = productId && productDetails[productId] ? productDetails[productId] : null;
       
+      // Calculate making charges in rupees
+      const makingChargesPercent = item.isCustomItem
+        ? (item.customProductDetails?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0)
+        : (productDetail?.makingCharges || item.makingCharges || sale.makingChargesPercentage || 0);
+      
+      const rate = item.rate || 0;
+      const metalValue = (item.netWeight || item.weight || 0) * rate; // Use netWeight or weight for metal value calculation
+      const calculatedMakingCharge = (metalValue * makingChargesPercent / 100);
+
       return {
         description: item.isCustomItem ? 
           item.customProductDetails?.name || 'Custom Item' : 
@@ -405,7 +414,7 @@ const SaleDetail = () => {
         huid: item.isCustomItem ? 
           item.customProductDetails?.huid : 
           (productDetail?.huidNumber || ''),
-        makingCharge: item.makingCharges ? (item.rate * item.weight * item.makingCharges / 100) : 0,
+        makingCharge: calculatedMakingCharge, // Assign the calculated making charge here
         category: item.isCustomItem ? 
           item.customProductDetails?.category : 
           (productDetail?.category || '')
@@ -778,4 +787,4 @@ const SaleDetail = () => {
   );
 };
 
-export default SaleDetail; 
+export default SaleDetail;
