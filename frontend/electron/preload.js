@@ -48,6 +48,6 @@ contextBridge.exposeInMainWorld('env', {
 });
 
 // Log for debugging
-console.log('Preload script executed, API URL set to:http://localhost:5000/api');
+console.log('Preload script executed, API URL set to:https://jewelry-management-api.onrender.com/api');
 
 debug('Preload script completed'); 

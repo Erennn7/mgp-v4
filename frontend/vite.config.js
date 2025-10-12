@@ -13,9 +13,11 @@ export default defineConfig({
   base: './', // Use relative paths for assets
   server: {
     port: 5173,
+    cors:true,
     proxy: {
       '/api': {
-        target: 'https://jewelry-management-api.onrender.com',
+        // target: 'https://jewelry-management-api.onrender.com',
+        target: 'https://jewelry-management-api.onrender.com/api',
         changeOrigin: true,
         secure: false
       }
