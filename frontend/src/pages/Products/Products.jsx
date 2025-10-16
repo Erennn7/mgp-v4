@@ -143,21 +143,29 @@ const Products = () => {
       
       setProducts(productsWithRates);
       
-      // Calculate total net weight, accounting for stock quantity
+      // Calculate total net weight - sum of netWeight of ALL products in inventory
+      // Each product's weight is multiplied by its stock quantity
       const calculatedTotalNetWeight = productsWithRates.reduce((sum, product) => {
         const netWeight = parseFloat(product.netWeight) || 0;
-        const stock = parseInt(product.stock) || 0; // Get stock quantity
+        const stock = parseInt(product.stock);
         const weightType = product.weightType || 'Gram';
         
-        // Calculate total weight for this product (netWeight * stock)
-        const productTotalWeight = netWeight * stock;
+        // If stock is 0 or undefined, treat as 1 item in inventory
+        const actualStock = (stock === undefined || stock === 0) ? 1 : stock;
+        
+        // Calculate total weight for this product (netWeight * actualStock)
+        const productTotalWeight = netWeight * actualStock;
 
         // Convert all weights to grams for summation
         if (weightType === 'Milligram') {
           return sum + (productTotalWeight / 1000);
         } else if (weightType === 'Carat') {
           return sum + (productTotalWeight * 0.2);
+        } else if (weightType === 'Piece') {
+          // For 'Piece' weightType, don't include in weight calculation
+          return sum;
         } else {
+          // Default to Gram
           return sum + productTotalWeight;
         }
       }, 0);

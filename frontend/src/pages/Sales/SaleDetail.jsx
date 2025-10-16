@@ -65,34 +65,9 @@ const SaleDetail = () => {
       const response = await api.get(`/sales/${id}`);
       setSale(response.data.data);
       
-      // Calculate the serial number for this bill (GST or non-GST)
-      try {
-        // Get all sales to calculate serial number
-        const allSalesResponse = await api.get('/sales');
-        
-        if (allSalesResponse.data.data) {
-          const allSales = allSalesResponse.data.data;
-          const isGstBill = response.data.data.tax > 0;
-          
-          // Filter all sales by GST or non-GST status
-          const sameCategoryBills = allSales.filter(s => 
-            isGstBill ? s.tax > 0 : s.tax === 0
-          );
-          
-          // Sort by creation date
-          const sortedBills = sameCategoryBills.sort((a, b) => 
-            new Date(a.createdAt) - new Date(b.createdAt)
-          );
-          
-          // Find this bill's position in the sorted list (1-based)
-          const billIndex = sortedBills.findIndex(s => s._id === id);
-          if (billIndex !== -1) {
-            setSerialNumber(billIndex + 1);
-          }
-        }
-      } catch (err) {
-        console.error('Error calculating serial number:', err);
-        // If we can't calculate the serial number, continue without it
+      // Use the serialNumber from the database
+      if (response.data.data.serialNumber) {
+        setSerialNumber(response.data.data.serialNumber);
       }
       
       setError(null);

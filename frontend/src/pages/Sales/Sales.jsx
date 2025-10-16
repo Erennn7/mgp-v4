@@ -71,35 +71,21 @@ const Sales = () => {
       setGstBillsCount(gstBills.length);
       setNonGstBillsCount(nonGstBills.length);
       
-      // Assign sequential numbers to each category separately
-      // GST Bills - Sort by creation date first
-      const sortedGstBills = [...gstBills].sort((a, b) => 
-        new Date(a.createdAt) - new Date(b.createdAt)
-      );
-      
-      // Assign serial numbers to GST bills
-      const gstBillsWithSerialNumbers = sortedGstBills.map((sale, index) => ({
+      // Add serialType to each bill (use serialNumber from backend)
+      const gstBillsWithType = gstBills.map(sale => ({
         ...sale,
-        serialNumber: index + 1,
         serialType: 'GST'
       }));
       
-      // Non-GST Bills - Sort by creation date first
-      const sortedNonGstBills = [...nonGstBills].sort((a, b) => 
-        new Date(a.createdAt) - new Date(b.createdAt)
-      );
-      
-      // Assign serial numbers to non-GST bills
-      const nonGstBillsWithSerialNumbers = sortedNonGstBills.map((sale, index) => ({
+      const nonGstBillsWithType = nonGstBills.map(sale => ({
         ...sale,
-        serialNumber: index + 1,
         serialType: 'REG'
       }));
       
-      // Combine all sales with their respective serial numbers
+      // Combine all sales with their respective types
       const allSalesWithSerialNumbers = [
-        ...gstBillsWithSerialNumbers,
-        ...nonGstBillsWithSerialNumbers
+        ...gstBillsWithType,
+        ...nonGstBillsWithType
       ];
       
       // Store all sales

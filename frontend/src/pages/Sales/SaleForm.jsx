@@ -1451,10 +1451,7 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
                 }
               >
                 <MenuItem value="Cash">Cash</MenuItem>
-                <MenuItem value="Card">Card</MenuItem>
-                <MenuItem value="UPI">UPI</MenuItem>
-                <MenuItem value="Bank Transfer">Bank Transfer</MenuItem>
-                <MenuItem value="Other">Other</MenuItem>
+                <MenuItem value="Online">Online</MenuItem>
               </Select>
             </FormControl>
           </Grid>

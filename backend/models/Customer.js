@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const CustomerSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'Please add a name'],
     trim: true,
     maxlength: [100, 'Name can not be more than 100 characters']
   },
@@ -16,14 +15,12 @@ const CustomerSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    required: [true, 'Please add a phone number'],
     maxlength: [20, 'Phone number can not be more than 20 characters']
   },
   gstin: {
     type: String,
     trim: true,
-    maxlength: [15, 'GSTIN must be 15 characters'],
-    minlength: [15, 'GSTIN must be 15 characters']
+    maxlength: [15, 'GSTIN can not be more than 15 characters']
   },
   idNumber: {
     type: String,

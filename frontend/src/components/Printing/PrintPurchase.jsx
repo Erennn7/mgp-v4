@@ -56,6 +56,18 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
           </Box>
         </Box>
 
+        {/* Serial Number Row */}
+        {purchaseData?.serialNumber && (
+          <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 1 }}>
+            <Typography variant="body2" component="span" sx={{ fontSize: '9pt', fontWeight: 'bold', color: '#000' }}>
+              Serial No:
+            </Typography>{' '}
+            <Typography variant="body2" component="span" sx={{ fontSize: '9pt', color: '#000' }}>
+              PUR-{purchaseData.serialNumber}
+            </Typography>
+          </Box>
+        )}
+
         {/* Vendor Information */}
         <Box sx={{ mb: 1 }}>
           <Typography variant="body2" component="span" sx={{ fontSize: '12pt', fontWeight: 'bold', color: '#000' }}>
@@ -107,6 +119,16 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
                 // HSN code logic
                 const getHSNCode = (item) => {
                   const purity = (item.purity || '').toLowerCase().trim();
+                  
+                  // Check for 24K format
+                  if (purity === '24k' || purity === '24 k' || purity === '24 kt' || purity === '24kt') {
+                    return '7108';
+                  }
+                  
+                  // Check for 24K percentage format (99.9%)
+                  if (purity === '99.9%' || purity === '99.9' || purity === '99.9 %' || purity === '999') {
+                    return '7108';
+                  }
                   
                   // Check for 22K format
                   if (purity === '22k' || purity === '22 k' || purity === '22 kt' || purity === '22kt') {
@@ -273,6 +295,13 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
             <span class="bold">Date:</span> ${purchaseData?.date ? new Date(purchaseData.date).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')}
           </div>
         </div>
+        
+        ${purchaseData?.serialNumber ? `
+        <!-- Serial Number -->
+        <div style="margin-bottom: 1em;">
+          <span class="bold">Serial No:</span> PUR-${purchaseData.serialNumber}
+        </div>
+        ` : ''}
         
         <!-- Vendor Info -->
         <div class="vendor-info">

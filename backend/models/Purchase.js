@@ -57,6 +57,11 @@ const PurchaseSchema = new mongoose.Schema({
     unique: true,
     trim: true
   },
+  serialNumber: {
+    type: Number,
+    unique: true,
+    sparse: true
+  },
   vendor: {
     name: {
       type: String,
@@ -109,7 +114,7 @@ const PurchaseSchema = new mongoose.Schema({
   }
 });
 
-// Generate purchase number before saving
+// Generate purchase number and serial number before saving
 PurchaseSchema.pre('save', async function(next) {
   if (!this.purchaseNumber) {
     // Get current date
@@ -131,6 +136,22 @@ PurchaseSchema.pre('save', async function(next) {
     
     // Format: PUR-YYMM-SEQUENCE
     this.purchaseNumber = `PUR-${year}${month}-${sequence.toString().padStart(4, '0')}`;
+  }
+  
+  // Generate serial number if not exists
+  if (this.isNew && !this.serialNumber) {
+    // Get the highest serial number
+    const lastPurchaseWithSerial = await this.constructor.findOne(
+      { serialNumber: { $exists: true } },
+      { serialNumber: 1 },
+      { sort: { serialNumber: -1 } }
+    );
+    
+    if (lastPurchaseWithSerial && lastPurchaseWithSerial.serialNumber) {
+      this.serialNumber = lastPurchaseWithSerial.serialNumber + 1;
+    } else {
+      this.serialNumber = 1;
+    }
   }
   
   next();

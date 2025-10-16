@@ -103,28 +103,35 @@ console.log(billData);
     const baseHtml = `
       <div class="content-area">
         <!-- Bill Header -->
-        <div class="header-row ">
-          <div style="font-size: 16px;">
+        <div class="header-row">
+          <div style="font-size: 10pt;">
             <span class="bold">Bill No:</span> ${billData?.invoiceNumber || 'INV-XXXXXX'}
           </div>
-          <div style="font-size: 16px;">
-            <span class="bold " >Date:</span> ${billData?.date ? new Date(billData.date).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')}
+          <div style="font-size: 10pt;">
+            <span class="bold">Date:</span> ${billData?.date ? new Date(billData.date).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')}
           </div>
         </div>
         
+        <!-- GST Invoice Number - Only show for GST bills -->
+        ${billData?.serialNumber && (billData?.taxRate > 0 || billData?.tax > 0) ? `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <div style="font-size: 10pt;">
+            <span class="bold">GST Invoice No:</span>
+            <span style="font-weight: bold; color: #1976d2;">
+              GST-${Number(billData.serialNumber) + 54}
+            </span>
+          </div>
+        </div>
+        ` : ''}
+        
         <!-- Bill Type -->
-        <div style="text-align: center; margin: 10px 0;">
-          <span style="font-weight: bold; padding: 4px 12px; font-size: 12pt; 
+        <div style="text-align: center; margin-bottom: 6px;">
+          <span style="font-weight: bold; padding: 3px 10px; font-size: 11pt; display: inline-block;
           ${(billData?.taxRate > 0 || billData?.tax > 0) ? 
             'color: #1a56db; background-color: #ebf5ff; border: 1px solid #bfdbfe;' : 
             'color: #047857; background-color: #ecfdf5; border: 1px solid #a7f3d0;'}
           border-radius: 4px;">
-            ${(billData?.taxRate > 0 || billData?.tax > 0) ? 'GST INVOICE' : 'RETAIL INVOICE'}
-            ${billData?.serialNumber ? 
-              `<span style="margin-left: 8px; font-size: 10pt;">${(billData?.taxRate > 0 || billData?.tax > 0) ? 
-                'GST-' + (Number(billData.serialNumber) + 54) : 
-                'REG-' + Number(billData.serialNumber)}</span>` : 
-              ''}
+            <span>${(billData?.taxRate > 0 || billData?.tax > 0) ? 'GST INVOICE' : 'RETAIL INVOICE'}</span>
           </span>
         </div>
         
@@ -164,6 +171,16 @@ console.log(billData);
                 
                 const purity = (item.purity || '').toLowerCase().trim();
                 
+                
+                // Check for 24K format
+                if (purity === '24k' || purity === '24 k' || purity === '24 kt' || purity === '24kt') {
+                  return '7108';
+                }
+                
+                // Check for 24K percentage format (99.9%)
+                if (purity === '99.9%' || purity === '99.9' || purity === '99.9 %' || purity === '999') {
+                  return '7108';
+                }
                 
                 // Check for 22K format
                 if (purity === '22k' || purity === '22 k' || purity === '22 kt' || purity === '22kt') {
@@ -274,54 +291,64 @@ console.log(billData);
                 margin: 0;
                 padding: 0;
               }
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
               body {
                 margin: 0;
                 padding: 0;
                 width: 210mm;
                 height: 158mm;
                 font-family: Arial, sans-serif;
-              }
-              * {
-                box-sizing: border-box;
+                overflow: hidden;
               }
               .print-content {
                 width: 210mm;
                 height: 158mm;
                 position: relative;
                 background-color: #fff;
-                transform: none !important;
+                overflow: hidden;
               }
               .content-area {
                 position: absolute;
                 top: 38mm;
-                width: 100%;
+                left: 0;
+                right: 0;
+                width: 210mm;
                 height: 100mm;
                 padding: 3mm 5mm;
                 box-sizing: border-box;
                 font-family: Arial, sans-serif;
-                font-size: 8pt;
+                font-size: 9pt;
+                line-height: 1.2;
                 background-color: white;
                 color: #000;
               }
               .header-row {
                 display: flex;
                 justify-content: space-between;
-                margin-bottom: 1.5em;
+                margin-bottom: 4px;
+                font-size: 10pt;
               }
               .bold {
                 font-weight: bold;
               }
               .customer-info {
-                margin-bottom: 1.5em;
-                font-size: 12pt;
+                margin-bottom: 8px;
+                font-size: 10pt;
               }
               table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-bottom: 1em;
+                margin-bottom: 8px;
+                table-layout: fixed;
               }
               th, td {
-                border: 1px solid #ddd;
+                border: 1px solid #d1d5db;
                 padding: 2px;
                 font-size: 8pt;
                 color: #000;
@@ -330,6 +357,7 @@ console.log(billData);
               th {
                 font-weight: bold;
                 text-align: center;
+              }
               }
               .text-center {
                 text-align: center;
@@ -340,13 +368,14 @@ console.log(billData);
               .totals-box {
                 width: 33%;
                 margin-left: auto;
-                border: 1px solid #ddd;
+                border: 1px solid #d1d5db;
+                background-color: white;
               }
               .totals-row {
                 display: flex;
                 justify-content: space-between;
                 padding: 2px 8px;
-                border-bottom: 1px solid #ddd;
+                border-bottom: 1px solid #d1d5db;
                 font-size: 8pt;
               }
               .totals-row:last-child {
@@ -355,21 +384,20 @@ console.log(billData);
               .amount-words {
                 font-size: 8pt;
                 font-style: italic;
-                margin-top: 0.5em;
-                margin-bottom: 0.5em;
+                margin-top: 4px;
+                margin-bottom: 4px;
               }
               .footer-info {
                 display: flex;
                 justify-content: space-between;
-                margin-top: 0.5em;
+                margin-top: 4px;
                 font-size: 8pt;
               }
-              
               .gstin-info {
                 text-align: center;
                 font-weight: bold;
-                margin-top: 3.0em;
-                font-size: 12pt; /* Increased font size */
+                margin-top: 4px;
+                font-size: 8pt;
               }
             </style>
           </head>
@@ -398,21 +426,27 @@ console.log(billData);
                 margin: 0;
                 padding: 0;
               }
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
               body {
                 margin: 0;
                 padding: 0;
                 width: 210mm;
                 height: 158mm;
                 font-family: Arial, sans-serif;
-              }
-              * {
-                box-sizing: border-box;
+                overflow: hidden;
               }
               .print-content {
                 width: 210mm;
                 height: 158mm;
                 position: relative;
                 background-color: #fff;
+                overflow: hidden;
               }
               .header {
                 height: 38mm;
@@ -508,33 +542,38 @@ console.log(billData);
               .content-area {
                 position: absolute;
                 top: 38mm;
-                width: 100%;
+                left: 0;
+                right: 0;
+                width: 210mm;
                 height: 100mm;
                 padding: 3mm 5mm;
                 box-sizing: border-box;
                 font-family: Arial, sans-serif;
                 font-size: 9pt;
+                line-height: 1.2;
                 background-color: white;
                 color: #000;
               }
               .header-row {
                 display: flex;
                 justify-content: space-between;
-                margin-bottom: 1.5em;
+                margin-bottom: 4px;
               }
               .bold {
                 font-weight: bold;
               }
               .customer-info {
-                margin-bottom: 1.5em;
+                margin-bottom: 8px;
+                font-size: 10pt;
               }
               table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-bottom: 1em;
+                margin-bottom: 8px;
+                table-layout: fixed;
               }
               th, td {
-                border: 1px solid #ddd;
+                border: 1px solid #d1d5db;
                 padding: 2px;
                 font-size: 8pt;
                 color: #000;
@@ -553,13 +592,14 @@ console.log(billData);
               .totals-box {
                 width: 33%;
                 margin-left: auto;
-                border: 1px solid #ddd;
+                border: 1px solid #d1d5db;
+                background-color: white;
               }
               .totals-row {
                 display: flex;
                 justify-content: space-between;
                 padding: 2px 8px;
-                border-bottom: 1px solid #ddd;
+                border-bottom: 1px solid #d1d5db;
                 font-size: 8pt;
               }
               .totals-row:last-child {
@@ -568,17 +608,16 @@ console.log(billData);
               .amount-words {
                 font-size: 8pt;
                 font-style: italic;
-                margin-top: 0.5em;
-                margin-bottom: 0.5em;
+                margin-top: 4px;
+                margin-bottom: 4px;
               }
               .footer-info {
                 font-size: 8pt;
               }
-              
               .gstin-info {
                 text-align: center;
                 font-weight: bold;
-                margin-top: 0.5em;
+                margin-top: 4px;
                 font-size: 8pt;
               }
             </style>

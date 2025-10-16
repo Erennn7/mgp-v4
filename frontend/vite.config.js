@@ -16,7 +16,8 @@ export default defineConfig({
     cors:true,
     proxy: {
       '/api': {
-        target: 'https://jewelry-management-api.onrender.com/api',
+        // target: 'https://jewelry-management-api.onrender.com/api',
+        target: 'http://localhost:5001/api',
         changeOrigin: true,
         secure: false
       }

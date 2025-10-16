@@ -19,6 +19,7 @@ import {
   Home as HomeIcon,
   Map as MapIcon,
   PostAdd as PostAddIcon,
+  Receipt as ReceiptIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
@@ -28,6 +29,7 @@ const CustomerForm = ({ initialData = null, loading = false, onFormDataChange })
     name: '',
     phone: '',
     email: '',
+    gstin: '',
     idType: 'Aadhar',
     idNumber: '',
     dob: null,
@@ -49,6 +51,7 @@ const CustomerForm = ({ initialData = null, loading = false, onFormDataChange })
         name: initialData.name || '',
         phone: initialData.phone || '',
         email: initialData.email || '',
+        gstin: initialData.gstin || '',
         idType: initialData.idType || 'Aadhar',
         idNumber: initialData.idNumber || '',
         dob: initialData.dob ? dayjs(initialData.dob) : null,
@@ -152,7 +155,6 @@ const CustomerForm = ({ initialData = null, loading = false, onFormDataChange })
       <Grid item xs={12} sm={6}>
         <TextField
           fullWidth
-          required
           label="Full Name"
           name="name"
           value={formData.name}
@@ -173,7 +175,6 @@ const CustomerForm = ({ initialData = null, loading = false, onFormDataChange })
       <Grid item xs={12} sm={6}>
         <TextField
           fullWidth
-          required
           label="Phone Number"
           name="phone"
           value={formData.phone}
@@ -206,6 +207,27 @@ const CustomerForm = ({ initialData = null, loading = false, onFormDataChange })
             startAdornment: (
               <InputAdornment position="start">
                 <EmailIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Grid>
+      
+      <Grid item xs={12} sm={6}>
+        <TextField
+          fullWidth
+          label="GSTIN"
+          name="gstin"
+          value={formData.gstin}
+          onChange={handleChange}
+          disabled={loading}
+          error={!!errors.gstin}
+          helperText={errors.gstin || "Enter 15-digit GSTIN (if applicable)"}
+          inputProps={{ maxLength: 15 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <ReceiptIcon />
               </InputAdornment>
             ),
           }}
@@ -298,6 +320,8 @@ const CustomerForm = ({ initialData = null, loading = false, onFormDataChange })
           disabled={loading}
           error={!!errors['address.street']}
           helperText={errors['address.street']}
+          multiline
+          rows={2}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -308,7 +332,7 @@ const CustomerForm = ({ initialData = null, loading = false, onFormDataChange })
         />
       </Grid>
       
-      <Grid item xs={12} sm={6}>
+      <Grid item xs={12} sm={4}>
         <TextField
           fullWidth
           label="City"
@@ -328,7 +352,7 @@ const CustomerForm = ({ initialData = null, loading = false, onFormDataChange })
         />
       </Grid>
       
-      <Grid item xs={12} sm={6}>
+      <Grid item xs={12} sm={4}>
         <TextField
           fullWidth
           label="State"
@@ -348,10 +372,10 @@ const CustomerForm = ({ initialData = null, loading = false, onFormDataChange })
         />
       </Grid>
       
-      <Grid item xs={12} sm={6}>
+      <Grid item xs={12} sm={4}>
         <TextField
           fullWidth
-          label="PIN Code"
+          label="Pincode"
           name="address.pincode"
           value={formData.address.pincode}
           onChange={handleChange}

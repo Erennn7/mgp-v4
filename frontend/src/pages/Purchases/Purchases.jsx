@@ -599,6 +599,16 @@ const Purchases = () => {
         )
       },
       {
+        field: 'serialNumber',
+        headerName: 'Serial No.',
+        flex: 0.8,
+        renderCell: (params) => (
+          <Typography variant="body2" sx={{ fontWeight: 'medium', color: '#1976d2' }}>
+            {params.value ? `PUR-${params.value}` : '-'}
+          </Typography>
+        )
+      },
+      {
         field: 'vendorName',
         headerName: 'Vendor',
         flex: 1.5,

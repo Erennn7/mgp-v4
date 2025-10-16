@@ -59,6 +59,10 @@ const SaleSchema = new mongoose.Schema({
     unique: true,
     trim: true
   },
+  serialNumber: {
+    type: Number,
+    sparse: true // Allow multiple nulls, but unique if set
+  },
   customer: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Customer',
@@ -121,8 +125,9 @@ const SaleSchema = new mongoose.Schema({
   }
 });
 
-// Generate invoice number before saving
+// Generate invoice number and serial number before saving
 SaleSchema.pre('save', async function(next) {
+  // Generate invoice number
   if (!this.invoiceNumber) {
     // Get current date
     const date = new Date();
@@ -143,6 +148,26 @@ SaleSchema.pre('save', async function(next) {
     
     // Format: INV-YYMM-SEQUENCE
     this.invoiceNumber = `INV-${year}${month}-${sequence.toString().padStart(4, '0')}`;
+  }
+  
+  // Generate serial number based on GST or non-GST category
+  if (!this.serialNumber) {
+    const isGstBill = this.tax > 0;
+    
+    // Find the highest serial number in the same category (GST or non-GST)
+    const lastSaleInCategory = await this.constructor
+      .findOne(
+        isGstBill ? { tax: { $gt: 0 } } : { tax: 0 },
+        { serialNumber: 1 }
+      )
+      .sort({ serialNumber: -1 })
+      .lean();
+    
+    if (lastSaleInCategory && lastSaleInCategory.serialNumber) {
+      this.serialNumber = lastSaleInCategory.serialNumber + 1;
+    } else {
+      this.serialNumber = 1;
+    }
   }
   
   next();
