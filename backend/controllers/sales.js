@@ -94,7 +94,7 @@ exports.getSale = asyncHandler(async (req, res, next) => {
   const sale = await Sale.findById(req.params.id)
     .populate({
       path: 'customer',
-      select: 'name phone email address'
+      select: 'name phone email address gstin'
     })
     .populate({
       path: 'items.product',
