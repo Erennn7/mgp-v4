@@ -112,7 +112,7 @@ const BillPrintTemplate = ({ billData }) => {
       }}>
         {/* Bill Header - Invoice Number and Date */}
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-          <div style={{ fontSize: '10pt' }}>
+          <div style={{ fontSize: '8pt' }}>
             <span style={{ fontWeight: 'bold' }}>Bill No:</span>{' '}
             <span>{billData?.invoiceNumber || 'INV-XXXXXX'}</span>
           </div>
@@ -124,41 +124,42 @@ const BillPrintTemplate = ({ billData }) => {
           </div>
         </div>
 
-        {/* GST Invoice Number - Only show for GST bills */}
-        {billData?.serialNumber && (billData?.taxRate > 0 || billData?.tax > 0) && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-            <div style={{ fontSize: '10pt' }}>
-              <span style={{ fontWeight: 'bold' }}>GST Invoice No:</span>{' '}
+        {/* Invoice Number - GST or REG based on bill type */}
+        {billData?.serialNumber && (
+          <div style={{ marginBottom: '3px' }}>
+            <div style={{ fontSize: '8pt' }}>
+              <span style={{ fontWeight: 'bold' }}>
+                {(billData?.taxRate > 0 || billData?.tax > 0) ? 'GST Invoice No:' : 'REG Invoice No:'}
+              </span>{' '}
               <span style={{ fontWeight: 'bold', color: '#1976d2' }}>
-                GST-{Number(billData.serialNumber) + 54}
+                {(billData?.taxRate > 0 || billData?.tax > 0) ? 
+                  `GST-${Number(billData.serialNumber) + 54}` : 
+                  `REG-${Number(billData.serialNumber)}`}
               </span>
             </div>
           </div>
         )}
 
-        {/* Bill Type Indicator with GST Invoice Number */}
-        <div style={{ marginBottom: '6px', textAlign: 'center' }}>
-          <div style={{
-            fontWeight: 'bold',
-            display: 'inline-block',
-            padding: '3px 10px',
-            fontSize: '11pt',
-            color: billData?.taxRate > 0 || billData?.tax > 0 ? '#1a56db' : '#047857',
-            backgroundColor: billData?.taxRate > 0 || billData?.tax > 0 ? '#ebf5ff' : '#ecfdf5',
-            border: `1px solid ${billData?.taxRate > 0 || billData?.tax > 0 ? '#bfdbfe' : '#a7f3d0'}`,
-            borderRadius: '4px'
-          }}>
-            <span>{billData?.taxRate > 0 || billData?.tax > 0 ? 'GST INVOICE' : 'RETAIL INVOICE'}</span>
-          </div>
-        </div>
-
         {/* Customer Information */}
-        <div style={{ marginBottom: '8px', fontSize: '10pt' }}>
-          <span style={{ fontWeight: 'bold' }}>Customer:</span>{' '}
-          <span>
-            {billData?.customer?.name || 'Customer Name'},
-            {billData?.customer?.phone ? ` Ph: ${billData.customer.phone}` : ''}
-          </span>
+        <div style={{ marginBottom: '8px', fontSize: '8pt' }}>
+          <div style={{ marginBottom: '2px' }}>
+            <span style={{ fontWeight: 'bold' }}>Name:</span>{' '}
+            <span>{billData?.customer?.name || 'Customer Name'}</span>
+          </div>
+          <div style={{ marginBottom: '2px' }}>
+            <span style={{ fontWeight: 'bold' }}>Address:</span>{' '}
+            <span>
+              {billData?.customer?.address?.street && `${billData.customer.address.street}, `}
+              {billData?.customer?.address?.city && `${billData.customer.address.city}, `}
+              {billData?.customer?.address?.state && `${billData.customer.address.state} `}
+              {billData?.customer?.address?.pincode && `- ${billData.customer.address.pincode}`}
+              {!billData?.customer?.address?.street && !billData?.customer?.address?.city && !billData?.customer?.address?.state && !billData?.customer?.address?.pincode && 'N/A'}
+            </span>
+          </div>
+          <div style={{ marginBottom: '2px' }}>
+            <span style={{ fontWeight: 'bold' }}>Phone No:</span>{' '}
+            <span>{billData?.customer?.phone || 'N/A'}</span>
+          </div>
           {billData?.customer?.gstin && (
             <div style={{ marginTop: '2px' }}>
               <span style={{ fontWeight: 'bold' }}>Customer GSTIN:</span>{' '}
@@ -186,7 +187,7 @@ const BillPrintTemplate = ({ billData }) => {
                 <th style={{ border: '1px solid #d1d5db', padding: '2px', textAlign: 'center', width: '3%', fontWeight: 'bold', backgroundColor: 'white' }}>PCS</th>
                 <th style={{ border: '1px solid #d1d5db', padding: '2px', textAlign: 'center', width: '7%', fontWeight: 'bold', backgroundColor: 'white' }}>Gross Wt.</th>
                 <th style={{ border: '1px solid #d1d5db', padding: '2px', textAlign: 'center', width: '7%', fontWeight: 'bold', backgroundColor: 'white' }}>Net Wt.</th>
-                <th style={{ border: '1px solid #d1d5db', padding: '2px', textAlign: 'right', width: '9%', fontWeight: 'bold', backgroundColor: 'white' }}>Rate</th>
+                <th style={{ border: '1px solid #d1d5db', padding: '2px', textAlign: 'right', width: '9%', fontWeight: 'bold', backgroundColor: 'white' }}>Rate(per gm)</th>
                 <th style={{ border: '1px solid #d1d5db', padding: '2px', textAlign: 'right', width: '9%', fontWeight: 'bold', backgroundColor: 'white' }}>Making</th>
                 <th style={{ border: '1px solid #d1d5db', padding: '2px', textAlign: 'right', width: '10%', fontWeight: 'bold', backgroundColor: 'white' }}>Amount</th>
               </tr>

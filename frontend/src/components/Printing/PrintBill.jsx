@@ -104,7 +104,7 @@ console.log(billData);
       <div class="content-area">
         <!-- Bill Header -->
         <div class="header-row">
-          <div style="font-size: 10pt;">
+          <div style="font-size: 8pt;">
             <span class="bold">Bill No:</span> ${billData?.invoiceNumber || 'INV-XXXXXX'}
           </div>
           <div style="font-size: 10pt;">
@@ -112,33 +112,33 @@ console.log(billData);
           </div>
         </div>
         
-        <!-- GST Invoice Number - Only show for GST bills -->
-        ${billData?.serialNumber && (billData?.taxRate > 0 || billData?.tax > 0) ? `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-          <div style="font-size: 10pt;">
-            <span class="bold">GST Invoice No:</span>
+        <!-- Invoice Number - GST or REG based on bill type -->
+        ${billData?.serialNumber ? `
+        <div style="margin-bottom: 3px;">
+          <div style="font-size: 8pt;">
+            <span class="bold">${(billData?.taxRate > 0 || billData?.tax > 0) ? 'GST Invoice No:' : 'REG Invoice No:'}</span>
             <span style="font-weight: bold; color: #1976d2;">
-              GST-${Number(billData.serialNumber) + 54}
+              ${(billData?.taxRate > 0 || billData?.tax > 0) ? 
+                'GST-' + (Number(billData.serialNumber) + 54) : 
+                'REG-' + Number(billData.serialNumber)}
             </span>
           </div>
         </div>
         ` : ''}
         
-        <!-- Bill Type -->
-        <div style="text-align: center; margin-bottom: 6px;">
-          <span style="font-weight: bold; padding: 3px 10px; font-size: 11pt; display: inline-block;
-          ${(billData?.taxRate > 0 || billData?.tax > 0) ? 
-            'color: #1a56db; background-color: #ebf5ff; border: 1px solid #bfdbfe;' : 
-            'color: #047857; background-color: #ecfdf5; border: 1px solid #a7f3d0;'}
-          border-radius: 4px;">
-            <span>${(billData?.taxRate > 0 || billData?.tax > 0) ? 'GST INVOICE' : 'RETAIL INVOICE'}</span>
-          </span>
-        </div>
-        
         <!-- Customer Info -->
-        <div class="customer-info">
-          <span class="bold">Customer:</span> ${billData?.customer?.name || 'Customer Name'}${billData?.customer?.phone ? `, Ph: ${billData.customer.phone}` : ''}
-          ${billData?.customer?.gstin ? `<div style="margin-top: 4px;"><span class="bold">Customer GSTIN:</span> ${billData.customer.gstin}</div>` : ''}
+        <div style="margin-bottom: 8px; font-size: 8pt;">
+          <div style="margin-bottom: 2px;">
+            <span class="bold">Name:</span> ${billData?.customer?.name || 'Customer Name'}
+          </div>
+          <div style="margin-bottom: 2px;">
+            <span class="bold">Address:</span> 
+            ${billData?.customer?.address?.street ? billData.customer.address.street + ', ' : ''}${billData?.customer?.address?.city ? billData.customer.address.city + ', ' : ''}${billData?.customer?.address?.state ? billData.customer.address.state + ' ' : ''}${billData?.customer?.address?.pincode ? '- ' + billData.customer.address.pincode : ''}${!billData?.customer?.address?.street && !billData?.customer?.address?.city && !billData?.customer?.address?.state && !billData?.customer?.address?.pincode ? 'N/A' : ''}
+          </div>
+          <div style="margin-bottom: 2px;">
+            <span class="bold">Phone No:</span> ${billData?.customer?.phone || 'N/A'}
+          </div>
+          ${billData?.customer?.gstin ? `<div style="margin-top: 2px;"><span class="bold">Customer GSTIN:</span> ${billData.customer.gstin}</div>` : ''}
         </div>
         
         <!-- Items Table -->
