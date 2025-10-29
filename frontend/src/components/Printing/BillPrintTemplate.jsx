@@ -143,8 +143,8 @@ const BillPrintTemplate = ({ billData }) => {
         {/* Customer Information */}
         <div style={{ marginBottom: '8px', fontSize: '8pt' }}>
           <div style={{ marginBottom: '2px' }}>
-            <span style={{ fontWeight: 'bold' }}>Name:</span>{' '}
-            <span>{billData?.customer?.name || 'Customer Name'}</span>
+            <span style={{ fontWeight: 'bold', fontSize: '10pt' }}>Name:</span>{' '}
+            <span style={{ fontSize: '10pt', fontWeight: 'bold' }}>{billData?.customer?.name || 'Customer Name'}</span>
           </div>
           <div style={{ marginBottom: '2px' }}>
             <span style={{ fontWeight: 'bold' }}>Address:</span>{' '}
@@ -160,12 +160,6 @@ const BillPrintTemplate = ({ billData }) => {
             <span style={{ fontWeight: 'bold' }}>Phone No:</span>{' '}
             <span>{billData?.customer?.phone || 'N/A'}</span>
           </div>
-          {billData?.customer?.gstin && (
-            <div style={{ marginTop: '2px' }}>
-              <span style={{ fontWeight: 'bold' }}>Customer GSTIN:</span>{' '}
-              <span>{billData.customer.gstin}</span>
-            </div>
-          )}
         </div>
 
         {/* Items Table */}
@@ -329,18 +323,30 @@ const BillPrintTemplate = ({ billData }) => {
                   </p>
                 </div>
               </div>
-
-              {/* GSTIN in the content area instead of bottom strip */}
-              {taxRate > 0 && (
-                <div style={{ textAlign: 'center', fontSize: '8pt', fontWeight: 'bold', marginTop: '4px' }}>
-                  GSTIN: 27DGJPP9641E1ZZ
-                  {billData?.customer?.gstin && ` | Customer GSTIN: ${billData.customer.gstin}`}
-                </div>
-              )}
             </>
           );
         })()}
       </div>
+
+      {/* Bottom Yellow Strip for GSTIN - Show only for GST invoices */}
+      {(billData?.taxRate > 0 || billData?.tax > 0) && (
+        <div className="absolute w-full" style={{
+          bottom: '10mm',
+          left: 0,
+          right: 0,
+          width: '210mm',
+          backgroundColor: '#FEF08A',
+          padding: '3mm 6mm',
+          boxSizing: 'border-box',
+          fontSize: '10pt',
+          fontWeight: 'bold'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            GSTIN: 27DGJPP9641E1ZZ
+            {billData?.customer?.gstin && ` | Customer GSTIN: ${billData.customer.gstin}`}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

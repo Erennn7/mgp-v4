@@ -39,18 +39,18 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
         {/* Purchase Header - Invoice Number and Date */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
           <Box>
-            <Typography variant="body2" component="span" sx={{ fontSize: '9pt', fontWeight: 'bold', color: '#000' }}>
+            <Typography variant="body2" component="span" sx={{ fontSize: '8pt', fontWeight: 'bold', color: '#000' }}>
               Purchase No:
             </Typography>{' '}
-            <Typography variant="body2" component="span" sx={{ fontSize: '9pt', color: '#000' }}>
+            <Typography variant="body2" component="span" sx={{ fontSize: '8pt', color: '#000' }}>
               {purchaseData?.invoiceNumber || 'PUR-XXXXXX'}
             </Typography>
           </Box>
           <Box>
-            <Typography variant="body2" component="span" sx={{ fontSize: '9pt', fontWeight: 'bold', color: '#000' }}>
+            <Typography variant="body2" component="span" sx={{ fontSize: '10pt', fontWeight: 'bold', color: '#000' }}>
               Date:
             </Typography>{' '}
-            <Typography variant="body2" component="span" sx={{ fontSize: '9pt', color: '#000' }}>
+            <Typography variant="body2" component="span" sx={{ fontSize: '10pt', color: '#000' }}>
               {purchaseData?.date ? new Date(purchaseData.date).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')}
             </Typography>
           </Box>
@@ -59,24 +59,45 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
         {/* Serial Number Row */}
         {purchaseData?.serialNumber && (
           <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 1 }}>
-            <Typography variant="body2" component="span" sx={{ fontSize: '9pt', fontWeight: 'bold', color: '#000' }}>
+            <Typography variant="body2" component="span" sx={{ fontSize: '8pt', fontWeight: 'bold', color: '#000' }}>
               Serial No:
             </Typography>{' '}
-            <Typography variant="body2" component="span" sx={{ fontSize: '9pt', color: '#000' }}>
+            <Typography variant="body2" component="span" sx={{ fontSize: '8pt', color: '#000' }}>
               PUR-{purchaseData.serialNumber}
             </Typography>
           </Box>
         )}
 
         {/* Vendor Information */}
-        <Box sx={{ mb: 1 }}>
-          <Typography variant="body2" component="span" sx={{ fontSize: '12pt', fontWeight: 'bold', color: '#000' }}>
-            Customer:
-          </Typography>{' '}
-          <Typography variant="body2" component="span" sx={{ fontSize: '12pt', color: '#000' }}>
-            {purchaseData?.vendor?.name || 'Vendor Name'},
-            {purchaseData?.vendor?.phone ? ` Ph: ${purchaseData.vendor.phone}` : ''}
-          </Typography>
+        <Box sx={{ mb: 1, fontSize: '8pt' }}>
+          <Box sx={{ mb: 0.5 }}>
+            <Typography variant="body2" component="span" sx={{ fontSize: '10pt', fontWeight: 'bold', color: '#000' }}>
+              Name:
+            </Typography>{' '}
+            <Typography variant="body2" component="span" sx={{ fontSize: '10pt', fontWeight: 'bold', color: '#000' }}>
+              {purchaseData?.vendor?.name || 'Vendor Name'}
+            </Typography>
+          </Box>
+          <Box sx={{ mb: 0.5 }}>
+            <Typography variant="body2" component="span" sx={{ fontSize: '8pt', fontWeight: 'bold', color: '#000' }}>
+              Address:
+            </Typography>{' '}
+            <Typography variant="body2" component="span" sx={{ fontSize: '8pt', color: '#000' }}>
+              {purchaseData?.vendor?.address?.street && `${purchaseData.vendor.address.street}, `}
+              {purchaseData?.vendor?.address?.city && `${purchaseData.vendor.address.city}, `}
+              {purchaseData?.vendor?.address?.state && `${purchaseData.vendor.address.state} `}
+              {purchaseData?.vendor?.address?.pincode && `- ${purchaseData.vendor.address.pincode}`}
+              {!purchaseData?.vendor?.address?.street && !purchaseData?.vendor?.address?.city && !purchaseData?.vendor?.address?.state && !purchaseData?.vendor?.address?.pincode && 'N/A'}
+            </Typography>
+          </Box>
+          <Box sx={{ mb: 0.5 }}>
+            <Typography variant="body2" component="span" sx={{ fontSize: '8pt', fontWeight: 'bold', color: '#000' }}>
+              Phone No:
+            </Typography>{' '}
+            <Typography variant="body2" component="span" sx={{ fontSize: '8pt', color: '#000' }}>
+              {purchaseData?.vendor?.phone || 'N/A'}
+            </Typography>
+          </Box>
         </Box>
 
         {/* Items Table - Compact styling for proper fit */}
@@ -243,6 +264,25 @@ const PurchasePrintTemplate = ({ purchaseData }) => {
           );
         })()}
       </Box>
+      
+      {/* Bottom Yellow Strip for GSTIN */}
+      {/* <Box sx={{
+        position: 'absolute',
+        bottom: '2mm',
+        left: 0,
+        right: 0,
+        width: '210mm',
+        backgroundColor: '#FEF08A',
+        padding: '3mm 5mm',
+        boxSizing: 'border-box',
+        fontSize: '10pt',
+        fontWeight: 'bold'
+      }}>
+        <Box sx={{ textAlign: 'center' }}>
+          GSTIN: 27DGJPP9641E1ZZ
+          {purchaseData?.vendor?.gstin && ` | Vendor GSTIN: ${purchaseData.vendor.gstin}`}
+        </Box>
+      </Box> */}
     </Box>
   );
 };
@@ -288,24 +328,33 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
       <div class="content-area">
         <!-- Purchase Header -->
         <div class="header-row">
-          <div>
+          <div style="font-size: 8pt;">
             <span class="bold">Purchase No:</span> ${purchaseData?.invoiceNumber || 'PUR-XXXXXX'}
           </div>
-          <div>
+          <div style="font-size: 10pt;">
             <span class="bold">Date:</span> ${purchaseData?.date ? new Date(purchaseData.date).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')}
           </div>
         </div>
         
         ${purchaseData?.serialNumber ? `
         <!-- Serial Number -->
-        <div style="margin-bottom: 1em;">
+        <div style="margin-bottom: 3px; font-size: 8pt;">
           <span class="bold">Serial No:</span> PUR-${purchaseData.serialNumber}
         </div>
         ` : ''}
         
         <!-- Vendor Info -->
-        <div class="vendor-info">
-          <span class="bold ">Customer:</span> ${purchaseData?.vendor?.name || 'Vendor Name'}${purchaseData?.vendor?.phone ? `, Ph: ${purchaseData.vendor.phone}` : ''}
+        <div style="margin-bottom: 8px; font-size: 8pt;">
+          <div style="margin-bottom: 2px;">
+            <span class="bold" style="font-size: 10pt;">Name:</span> <span style="font-size: 10pt; font-weight: bold;">${purchaseData?.vendor?.name || 'Vendor Name'}</span>
+          </div>
+          <div style="margin-bottom: 2px;">
+            <span class="bold">Address:</span> 
+            ${purchaseData?.vendor?.address?.street ? purchaseData.vendor.address.street + ', ' : ''}${purchaseData?.vendor?.address?.city ? purchaseData.vendor.address.city + ', ' : ''}${purchaseData?.vendor?.address?.state ? purchaseData.vendor.address.state + ' ' : ''}${purchaseData?.vendor?.address?.pincode ? '- ' + purchaseData.vendor.address.pincode : ''}${!purchaseData?.vendor?.address?.street && !purchaseData?.vendor?.address?.city && !purchaseData?.vendor?.address?.state && !purchaseData?.vendor?.address?.pincode ? 'N/A' : ''}
+          </div>
+          <div style="margin-bottom: 2px;">
+            <span class="bold">Phone No:</span> ${purchaseData?.vendor?.phone || 'N/A'}
+          </div>
         </div>
         
         <!-- Items Table -->
@@ -380,6 +429,8 @@ const PrintPurchase = ({ open, onClose, purchaseData, directPrint = false, gener
           <div>Payment Mode: ${purchaseData?.paymentMethod || 'Cash'}</div>
         </div>
       </div>
+      
+      
     `;
 
     // Generate independent HTML for direct printing (without pre-printed elements)

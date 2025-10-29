@@ -129,7 +129,7 @@ console.log(billData);
         <!-- Customer Info -->
         <div style="margin-bottom: 8px; font-size: 8pt;">
           <div style="margin-bottom: 2px;">
-            <span class="bold">Name:</span> ${billData?.customer?.name || 'Customer Name'}
+            <span class="bold" style="font-size: 10pt;">Name:</span> <span style="font-size: 10pt; font-weight: bold;">${billData?.customer?.name || 'Customer Name'}</span>
           </div>
           <div style="margin-bottom: 2px;">
             <span class="bold">Address:</span> 
@@ -138,7 +138,6 @@ console.log(billData);
           <div style="margin-bottom: 2px;">
             <span class="bold">Phone No:</span> ${billData?.customer?.phone || 'N/A'}
           </div>
-          ${billData?.customer?.gstin ? `<div style="margin-top: 2px;"><span class="bold">Customer GSTIN:</span> ${billData.customer.gstin}</div>` : ''}
         </div>
         
         <!-- Items Table -->
@@ -153,7 +152,7 @@ console.log(billData);
               <th style="width: 3%;">PCS</th>
               <th style="width: 7%;">Gross Wt.</th>
               <th style="width: 7%;">Net Wt.</th>
-              <th style="width: 9%;" class="text-right">Rate</th>
+              <th style="width: 9%;" class="text-right">Rate <br />(per gm)</th>
               <th style="width: 9%;" class="text-right">Making</th>
               <th style="width: 10%;" class="text-right">Amount</th>
             </tr>
@@ -267,14 +266,16 @@ console.log(billData);
             </div>
           </div>
         </div>
-        
-        ${taxRate > 0 ? `
-        <!-- GSTIN Info -->
-        <div class="gstin-info">
+      </div>
+      
+      ${(billData?.taxRate > 0 || billData?.tax > 0) ? `
+      <!-- Bottom Yellow Strip for GSTIN - Show only for GST invoices -->
+      <div style="position: absolute; bottom: 10mm; left: 0; right: 0; width: 210mm; background-color: #FEF08A; padding: 3mm 6mm; box-sizing: border-box; font-size: 10pt; font-weight: bold;">
+        <div style="text-align: center;">
           GSTIN: 27DGJPP9641E1ZZ ${billData?.customer?.gstin ? `| Customer GSTIN: ${billData.customer.gstin}` : ''}
         </div>
-        ` : ''}
       </div>
+      ` : ''}
     `;
 
     // Generate independent HTML for direct printing (without pre-printed elements)
