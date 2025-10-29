@@ -64,12 +64,21 @@ const Sales = () => {
       const salesData = response.data.data;
       
       // Group sales by GST and non-GST
-      const gstBills = salesData.filter(sale => sale.tax > 0);
-      const nonGstBills = salesData.filter(sale => sale.tax === 0);
+      const gstBills = salesData.filter(sale => Number(sale.tax) > 0);
+      const nonGstBills = salesData.filter(sale => !(Number(sale.tax) > 0));
       
-      // Set counts
-      setGstBillsCount(gstBills.length);
-      setNonGstBillsCount(nonGstBills.length);
+      // Set counts using backend-provided totals for accuracy across pages
+      if (typeof response.data.totalGst === 'number') {
+        setGstBillsCount(response.data.totalGst);
+      } else {
+        setGstBillsCount(gstBills.length);
+      }
+
+      if (typeof response.data.totalNonGst === 'number') {
+        setNonGstBillsCount(response.data.totalNonGst);
+      } else {
+        setNonGstBillsCount(nonGstBills.length);
+      }
       
       // Add serialType to each bill (use serialNumber from backend)
       const gstBillsWithType = gstBills.map(sale => ({
@@ -94,9 +103,11 @@ const Sales = () => {
       // Update filtered sales based on current tab
       updateFilteredSales(allSalesWithSerialNumbers, currentTab);
       
-      // Set total count from pagination data
-      if (response.data.pagination) {
-        setTotalSales(response.data.total || response.data.data.length);
+      // Set total count using backend-provided total (fallback to current page length)
+      if (typeof response.data.total === 'number') {
+        setTotalSales(response.data.total);
+      } else {
+        setTotalSales(response.data.count || allSalesWithSerialNumbers.length);
       }
       setError(null);
     } catch (err) {
@@ -114,10 +125,10 @@ const Sales = () => {
         setFilteredSales(allSales);
         break;
       case 1: // GST sales
-        setFilteredSales(allSales.filter(sale => sale.tax > 0));
+        setFilteredSales(allSales.filter(sale => Number(sale.tax) > 0));
         break;
       case 2: // Non-GST sales
-        setFilteredSales(allSales.filter(sale => sale.tax === 0));
+        setFilteredSales(allSales.filter(sale => !(Number(sale.tax) === 0)));
         break;
       default:
         setFilteredSales(allSales);

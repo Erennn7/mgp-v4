@@ -44,7 +44,7 @@ contextBridge.exposeInMainWorld('electron', {
 
 // Expose environment variables to the renderer process
 contextBridge.exposeInMainWorld('env', {
-  apiUrl: 'https://jewelry-management-api.onrender.com/api'
+  // apiUrl: 'https://jewelry-management-api.onrender.com/api'
 });
 
 // Log for debugging
