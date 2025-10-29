@@ -55,7 +55,21 @@ exports.getSales = asyncHandler(async (req, res, next) => {
   const limit = parseInt(req.query.limit, 10) || 25;
   const startIndex = (page - 1) * limit;
   const endIndex = page * limit;
-  const total = await Sale.countDocuments(JSON.parse(queryStr));
+  const baseFilter = JSON.parse(queryStr);
+  const total = await Sale.countDocuments(baseFilter);
+
+  // Compute GST / Non-GST totals based on same filter
+  const [totalGst, totalNonGst] = await Promise.all([
+    Sale.countDocuments({ ...baseFilter, tax: { $gt: 0 } }),
+    Sale.countDocuments({
+      ...baseFilter,
+      $or: [
+        { tax: { $exists: false } },
+        { tax: null },
+        { tax: { $lte: 0 } }
+      ]
+    })
+  ]);
 
   query = query.skip(startIndex).limit(limit);
 
@@ -82,6 +96,9 @@ exports.getSales = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     count: sales.length,
+    total,
+    totalGst,
+    totalNonGst,
     pagination,
     data: sales
   });
