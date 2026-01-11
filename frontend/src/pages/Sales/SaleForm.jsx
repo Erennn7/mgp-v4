@@ -262,10 +262,27 @@ const SaleForm = ({ initialData = null, loading = false, onFormDataChange }) => 
   const fetchCustomers = async () => {
     setLoadingCustomers(true);
     try {
-      const response = await api.get('/customers');
-      if (response.data.success) {
-        setCustomers(response.data.data);
+      // Fetch all customers with proper pagination to ensure search works for all of them
+      let allCustomers = [];
+      let page = 1;
+      let hasMoreCustomers = true;
+      
+      while (hasMoreCustomers) {
+        const response = await api.get(`/customers?page=${page}&limit=100`);
+        if (response.data.success) {
+          const fetchedCustomers = response.data.data;
+          allCustomers = [...allCustomers, ...fetchedCustomers];
+          
+          if (fetchedCustomers.length < 100) {
+            hasMoreCustomers = false;
+          } else {
+            page++;
+          }
+        } else {
+          hasMoreCustomers = false;
+        }
       }
+      setCustomers(allCustomers);
     } catch (err) {
       console.error('Error fetching customers:', err);
       toast.error('Failed to load customers');

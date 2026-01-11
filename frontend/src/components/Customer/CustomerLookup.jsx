@@ -66,26 +66,37 @@ const CustomerLookup = ({
 
   // Search customers when input changes
   useEffect(() => {
+    let active = true;
+
+    // If search term is too short, show first 50 customers
     if (inputValue.length < 2) {
-      return;
+      const fetchTopCustomers = async () => {
+        setLoading(true);
+        try {
+          const response = await api.get('/customers?limit=50');
+          if (active && response.data.success) {
+            setOptions(response.data.data);
+          }
+        } catch (error) {
+          console.error('Error fetching top customers:', error);
+        } finally {
+          if (active) setLoading(false);
+        }
+      };
+      
+      fetchTopCustomers();
+      return () => { active = false; };
     }
 
-    let active = true;
     setLoading(true);
 
     const searchCustomers = async () => {
       try {
-        // Client-side filtering from our initial load
-        const searchTerm = inputValue.toLowerCase();
-        const filteredCustomers = options.filter(customer => 
-          customer.name.toLowerCase().includes(searchTerm) || 
-          (customer.phone && customer.phone.includes(searchTerm))
-        );
+        // Use server-side search for better results
+        const response = await api.get(`/customers?search=${inputValue}&limit=100`);
         
-        console.log('Filtered customers:', filteredCustomers);
-        
-        if (active) {
-          setOptions(filteredCustomers.length > 0 ? filteredCustomers : options);
+        if (active && response.data.success) {
+          setOptions(response.data.data);
         }
       } catch (error) {
         console.error('Error searching customers:', error);
@@ -98,7 +109,7 @@ const CustomerLookup = ({
 
     const timer = setTimeout(() => {
       searchCustomers();
-    }, 300);
+    }, 500);
 
     return () => {
       active = false;

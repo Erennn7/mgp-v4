@@ -702,15 +702,7 @@ const CustomerDetail = () => {
                 height={400}
                 quickSearch={false}
               />
-              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                <Button 
-                  variant="contained" 
-                  color="primary"
-                  onClick={() => navigate('/sales/new', { state: { customerId: id } })}
-                >
-                  Create New Sale
-                </Button>
-              </Box>
+             
             </TabPanel>
 
             {/* Loans Tab */}

@@ -9,7 +9,7 @@ exports.getCustomers = asyncHandler(async (req, res, next) => {
   const reqQuery = { ...req.query };
 
   // Fields to exclude
-  const removeFields = ['select', 'sort', 'page', 'limit'];
+  const removeFields = ['select', 'sort', 'page', 'limit', 'search'];
 
   // Loop over removeFields and delete them from reqQuery
   removeFields.forEach(param => delete reqQuery[param]);
@@ -20,8 +20,18 @@ exports.getCustomers = asyncHandler(async (req, res, next) => {
   // Create operators ($gt, $gte, etc)
   queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
 
+  let queryParsed = JSON.parse(queryStr);
+
+  // Add search functionality
+  if (req.query.search) {
+    queryParsed.$or = [
+      { name: { $regex: req.query.search, $options: 'i' } },
+      { phone: { $regex: req.query.search, $options: 'i' } }
+    ];
+  }
+
   // Finding resource
-  let query = Customer.find(JSON.parse(queryStr));
+  let query = Customer.find(queryParsed);
 
   // Select Fields
   if (req.query.select) {
@@ -42,7 +52,7 @@ exports.getCustomers = asyncHandler(async (req, res, next) => {
   const limit = parseInt(req.query.limit, 10) || 25;
   const startIndex = (page - 1) * limit;
   const endIndex = page * limit;
-  const total = await Customer.countDocuments(JSON.parse(queryStr));
+  const total = await Customer.countDocuments(queryParsed);
 
   query = query.skip(startIndex).limit(limit);
 
